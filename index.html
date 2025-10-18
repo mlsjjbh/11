@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Solara</title>
+    <meta name="apple-mobile-web-app-title" content="隐雾藏免费音乐下载播放器">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+    <link rel="shortcut icon" href="/favicon.png">
+    <link rel="mask-icon" href="/favicon.svg" color="#5bbad5">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        (function () {
+            const ua = navigator.userAgent || "";
+            const isMobileUA = /android|iphone|ipad|ipod|mobile|blackberry|phone|opera mini|windows phone/i.test(ua);
+            const isSmallScreen = typeof window.matchMedia === "function" && window.matchMedia("(max-width: 820px)").matches;
+            const isMobile = isMobileUA || isSmallScreen;
+            window.__SOLARA_IS_MOBILE = isMobile;
+            if (!isMobile) {
+                document.documentElement.classList.add("desktop-view");
+                const desktopLink = document.createElement("link");
+                desktopLink.rel = "stylesheet";
+                desktopLink.href = "css/desktop.css";
+                desktopLink.id = "desktopStylesheet";
+                document.head.appendChild(desktopLink);
+                return;
+            }
+            document.documentElement.classList.add("mobile-view");
+            const link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = "css/mobile.css";
+            link.id = "mobileStylesheet";
+            document.head.appendChild(link);
+            const setViewportUnit = () => {
+                const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                document.documentElement.style.setProperty("--mobile-vh", `${viewportHeight}px`);
+            };
+
+            const applyBodyClass = () => {
+                if (document.body) {
+                    document.body.classList.add("mobile-view");
+                    setViewportUnit();
+                }
+            };
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", applyBodyClass, { once: true });
+            } else {
+                applyBodyClass();
+            }
+
+            window.addEventListener("resize", setViewportUnit);
+            window.addEventListener("orientationchange", setViewportUnit);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener("resize", setViewportUnit);
+                window.visualViewport.addEventListener("scroll", setViewportUnit);
+            }
+
+            setViewportUnit();
+        })();
+    </script>
+</head>
+<body>
+    <div class="background-stage" id="backgroundStage" aria-hidden="true">
+        <div class="background-stage__layer background-stage__layer--base" id="backgroundBaseLayer"></div>
+        <div class="background-stage__layer background-stage__layer--transition" id="backgroundTransitionLayer"></div>
+    </div>
+    <div class="container" id="mainContainer">
+        <div class="mobile-toolbar" id="mobileToolbar" role="toolbar">
+            <button class="mobile-toolbar__button" id="mobileExploreButton" type="button" aria-label="探索雷达">
+                <i class="fas fa-satellite-dish" aria-hidden="true"></i>
+            </button>
+            <div class="mobile-toolbar__title" id="mobileToolbarTitle">隐雾藏免费音乐下载播放器</div>
+            <div class="mobile-toolbar__actions">
+                <button class="mobile-toolbar__button" id="mobileSearchToggle" type="button" aria-label="打开搜索">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+        <div class="header">
+            <h1>隐雾藏免费音乐下载播放器</h1>
+            <div class="warning">Made by 大嘴（微信by隐雾藏），本网站免费供大家使用，欢迎大家多多分享本网站 --某位高二10班的高中生</div>
+            <div class="theme-switch-wrapper">
+                <button id="themeToggleButton" class="theme-toggle-button" type="button" aria-label="切换深浅色模式">
+                    <i class="fas fa-sun theme-icon theme-icon--sun" aria-hidden="true"></i>
+                    <i class="fas fa-moon theme-icon theme-icon--moon" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="search-area" id="searchArea">
+            <button type="button" class="mobile-close-btn" id="mobileSearchClose" aria-label="关闭搜索">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="搜索歌曲、歌手或专辑...">
+                <div class="source-select-wrapper" id="sourceSelectWrapper">
+                    <button id="sourceSelectButton" class="source-select-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+                        <span id="sourceSelectLabel">大嘴网易云音乐</span>
+                        <i class="fas fa-chevron-down caret-icon" aria-hidden="true"></i>
+                    </button>
+                    <div id="sourceMenu" class="source-menu" role="listbox" aria-labelledby="sourceSelectButton"></div>
+                </div>
+                <button id="searchBtn" class="search-btn">
+                    <i class="fas fa-search"></i>
+                    <span>搜索</span>
+                </button>
+            </div>
+            <div id="searchResults" class="search-results"></div>
+        </div>
+
+        <div class="main-content">
+            <div class="cover-area">
+                <div class="mobile-turntable" id="mobileTurntable">
+                    <div class="mobile-turntable__platter">
+                        <div class="album-cover" id="albumCover">
+                            <div class="placeholder">
+                                <i class="fas fa-music"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mobile-inline-lyrics" id="mobileInlineLyrics" aria-hidden="true">
+                    <div class="mobile-inline-lyrics__hint">
+                        <i class="fas fa-arrow-left"></i>
+                        返回封面哦！
+                    </div>
+                    <div class="mobile-inline-lyrics__scroll" id="mobileInlineLyricsScroll">
+                        <div class="mobile-inline-lyrics__content" id="mobileInlineLyricsContent"></div>
+                    </div>
+                </div>
+                <div class="current-song-info">
+                    <div class="current-song-title" id="currentSongTitle">选个歌听吧😯</div>
+                    <div class="current-song-artist" id="currentSongArtist">不愿意出名的大嘴</div>
+                    <button class="mobile-quality-chip" id="mobileQualityToggle" type="button" aria-haspopup="menu" aria-expanded="false">
+                        <span id="mobileQualityLabel">极高音质</span>
+                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mobile-panel" id="mobilePanel">
+                <div class="mobile-panel-header" id="mobilePanelHeader">
+                    <div class="mobile-panel-handle" aria-hidden="true"></div>
+                    <div class="mobile-panel-title" id="mobilePanelTitle">播放列表</div>
+                    <div class="mobile-panel-actions">
+                        <button
+                            id="mobileClearPlaylistBtn"
+                            class="mobile-panel-action-btn mobile-panel-clear-btn"
+                            type="button"
+                            aria-label="清空播放列表"
+                            title="清空播放列表"
+                            onclick="clearPlaylist()"
+                            hidden
+                        >
+                            <i class="fas fa-trash" aria-hidden="true"></i>
+                        </button>
+                        <button id="mobilePanelClose" class="mobile-close-btn mobile-panel-action-btn" type="button" aria-label="收起播放面板">
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="playlist active empty" id="playlist">
+                    <div class="playlist-label" aria-hidden="true">播放列表</div>
+                    <button class="clear-playlist-btn" id="clearPlaylistBtn" onclick="clearPlaylist()" title="清空播放列表">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <div class="playlist-scroll">
+                        <div class="playlist-items" id="playlistItems"></div>
+                    </div>
+                </div>
+                <div class="lyrics empty" id="lyrics" data-placeholder="default">
+                    <div class="lyrics-scroll" id="lyricsScroll">
+                        <div class="lyrics-content" id="lyricsContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="transport-controls">
+                <button class="play-mode-btn transport-button transport-button--mode" id="playModeBtn" type="button" title="播放模式">
+                    <i class="fas fa-repeat"></i>
+                </button>
+                <button class="transport-button transport-button--prev" onclick="playPrevious()" type="button" title="上一曲"><i class="fas fa-backward-step"></i></button>
+                <button class="transport-button transport-button--play" id="playPauseBtn" type="button" title="播放 / 暂停"><i class="fas fa-play"></i></button>
+                <button class="transport-button transport-button--next" onclick="playNext()" type="button" title="下一曲"><i class="fas fa-forward-step"></i></button>
+                <button class="transport-button transport-button--queue" id="mobileQueueToggle" type="button" title="打开播放列表" aria-label="打开播放列表"><i class="fas fa-bars"></i></button>
+            </div>
+            <div class="progress-container">
+                <span id="currentTimeDisplay">00:00</span>
+                <input type="range" id="progressBar" min="0" max="0" step="0.1" value="0">
+                <span id="durationDisplay">00:00</span>
+            </div>
+            <div class="audio-tools">
+                <div class="player-quality">
+                    <button id="qualityToggle" class="player-quality-btn" type="button">
+                        <span id="qualityLabel">极高音质</span>
+                    </button>
+                    <div id="playerQualityMenu" class="player-quality-menu"></div>
+                </div>
+                <div class="volume-container">
+                    <i id="volumeIcon" class="fas fa-volume-up"></i>
+                    <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.8">
+                </div>
+            </div>
+            <button id="loadOnlineBtn" title="聚合所有雷达，探索新音乐">
+                <span class="btn-text"><i class="fas fa-satellite-dish"></i> 探索雷达</span>
+                <span class="loader" style="display: none;"></span>
+            </button>
+        </div>
+    </div>
+
+    <div class="mobile-overlay-scrim" id="mobileOverlayScrim"></div>
+
+    <audio id="audioPlayer" preload="metadata" playsinline></audio>
+
+<!-- 通知容器 -->
+<div id="notification" class="notification"></div>
+
+<!-- 调试信息容器 -->
+<div id="debugInfo" class="debug-info"></div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="js/index.js"></script>
+<script>
+    if (window.__SOLARA_IS_MOBILE) {
+        const mobileScript = document.createElement('script');
+        mobileScript.src = 'js/mobile.js';
+        mobileScript.async = false;
+        mobileScript.defer = false;
+        document.body.appendChild(mobileScript);
+    }
+</script>
+</body>
+</html>
