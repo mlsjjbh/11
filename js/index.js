@@ -641,8 +641,8 @@ function buildAudioProxyUrl(url) {
 }
 
 const SOURCE_OPTIONS = [
-    { value: "netease", label: "网抑云音乐" },
-    { value: "kuwo", label: "酷我音乐" },
+    { value: "netease", label: "抑郁音乐" },
+    { value: "kuwo", label: "酷狗音乐音乐" },
     { value: "joox", label: "隐雾藏音乐" }
 ];
 
@@ -2200,7 +2200,7 @@ function setPlayMode(mode, { announce = true } = {}) {
 
     if (announce) {
         const modeText = playModeTexts[mode] || playModeTexts.list;
-        showNotification(`播放模式: ${modeText}`);
+        showNotification(`叮咚~ 播放模式切换为: ${modeText}`);
         debugLog(`播放模式切换为: ${mode} (列表: ${state.currentList})`);
     }
 
@@ -2391,7 +2391,7 @@ async function togglePlayPause() {
                 : 0;
             await playPlaylistSong(targetIndex);
         } else {
-            showNotification("播放列表为空，请先添加歌曲", "error");
+            showNotification("小贾说：播放列表空空如也~ 快去添加歌曲吧！", "error");
         }
         return;
     }
@@ -2405,7 +2405,7 @@ async function togglePlayPause() {
             });
         } catch (error) {
             console.error("恢复播放失败:", error);
-            showNotification("播放失败，请稍后重试", "error");
+            showNotification("小贾提醒：哎呀~ 播放失败了，再试一次吧！", "error");
         }
         return;
     }
@@ -2415,7 +2415,7 @@ async function togglePlayPause() {
         if (playPromise !== undefined) {
             playPromise.catch(error => {
                 console.error("播放失败:", error);
-                showNotification("播放失败，请检查网络连接", "error");
+                showNotification("隐雾藏警告：糟糕~ 网络好像出问题了！", "error");
             });
         }
     } else {
@@ -2810,13 +2810,13 @@ async function selectPlaybackQuality(quality) {
 
     const option = QUALITY_OPTIONS.find(item => item.value === normalized);
     if (option) {
-        showNotification(`音质已切换为 ${option.label} (${option.description})`);
+        showNotification(`小贾播报：叮咚~ 音质切换为 ${option.label} (${option.description})`);
     }
 
     if (state.currentSong) {
         const success = await reloadCurrentSong();
         if (!success) {
-            showNotification("切换音质失败，请稍后重试", "error");
+            showNotification("隐雾藏提示：呃哦~ 音质切换失败了，再试试！", "error");
         }
     }
 }
@@ -2989,9 +2989,9 @@ function setupInteractions() {
                 const added = addSongToPlaylist(song);
                 if (added) {
                     renderPlaylist();
-                    showNotification("已添加到播放列表", "success");
+                    showNotification("小贾欢呼：耶~ 已添加到播放列表！", "success");
                 } else {
-                    showNotification("播放列表已包含该歌曲", "warning");
+                    showNotification("隐雾藏提醒：嗯~ 这首歌已经在播放列表里啦！", "warning");
                 }
             } else if (action === "download") {
                 event.preventDefault();
@@ -3002,7 +3002,7 @@ function setupInteractions() {
                 event.stopPropagation();
                 const removed = removeFavoriteAtIndex(index);
                 if (removed) {
-                    showNotification("已从收藏列表移除", "success");
+                    showNotification("小贾说：拜拜~ 已从收藏列表移除！", "success");
                 }
             }
         };
@@ -3542,7 +3542,7 @@ function updateCurrentSongInfo(song, options = {}) {
 async function performSearch(isLiveSearch = false) {
     const query = dom.searchInput.value.trim();
     if (!query) {
-        showNotification("请输入搜索关键词", "error");
+        showNotification("小贾问：喂~ 输入点什么再搜索嘛！", "error");
         return;
     }
 
@@ -3606,12 +3606,12 @@ async function performSearch(isLiveSearch = false) {
 
         // 如果没有结果，显示提示
         if (state.searchResults.length === 0) {
-            showNotification("未找到相关歌曲", "error");
+            showNotification("隐雾藏找歌：咦~ 没找到相关歌曲呢！", "error");
         }
 
     } catch (error) {
         console.error("搜索失败:", error);
-        showNotification("搜索失败，请稍后重试", "error");
+        showNotification("小贾抓狂：糟糕~ 搜索失败了，再试一次！", "error");
         hideSearchResults();
         debugLog(`搜索失败: ${error.message}`);
     } finally {
@@ -3656,12 +3656,12 @@ async function loadMoreResults() {
             debugLog(`加载完成: 新增 ${results.length} 个结果`);
         } else {
             state.hasMoreResults = false;
-            showNotification("没有更多结果了");
+            showNotification("隐雾藏累了：没有更多结果啦！👋", "warning");
             debugLog("没有更多结果");
         }
     } catch (error) {
         console.error("加载更多失败:", error);
-        showNotification("加载失败，请稍后重试", "error");
+        showNotification("小贾哭了：哎呀~ 加载失败了，再试一次！😳", "error");
         state.searchPage--; // 回退页码
     } finally {
         if (loadMoreBtn) {
@@ -3915,7 +3915,7 @@ function importSelectedSearchResults(target = "playlist") {
 
     if (songsToAdd.length === 0) {
         resetSelectedSearchResults();
-        showNotification("未找到可导入的歌曲", "warning");
+        showNotification("隐雾藏检查：嗯~ 没有可导入的歌曲呢！", "warning");
         return;
     }
 
@@ -3953,10 +3953,10 @@ function importSelectedSearchResults(target = "playlist") {
             saveFavoriteState();
             renderFavorites();
             const duplicateHint = duplicates > 0 ? `，${duplicates} 首已存在` : "";
-            showNotification(`成功导入 ${added} 首收藏歌曲${duplicateHint}`, "success");
+            showNotification(`小贾开心：成功导入 ${added} 首收藏歌曲${duplicateHint}！`, "success");
         } else {
             updateFavoriteActionStates();
-            showNotification("选中的歌曲已在收藏列表中", "warning");
+            showNotification("隐雾藏提醒：哦~ 这些歌曲已经在收藏列表里啦！", "warning");
         }
         updateFavoriteIcons();
         return;
@@ -3991,10 +3991,10 @@ function importSelectedSearchResults(target = "playlist") {
     if (added > 0) {
         renderPlaylist();
         const duplicateHint = duplicates > 0 ? `，${duplicates} 首已存在` : "";
-        showNotification(`成功导入 ${added} 首歌曲${duplicateHint}`, "success");
+        showNotification(`小贾欢呼：成功导入 ${added} 首歌曲${duplicateHint}！`, "success");
     } else {
         updatePlaylistActionStates();
-        showNotification("选中的歌曲已在播放列表中", "warning");
+        showNotification("隐雾藏提示：嗯~ 这些歌曲已经在播放列表里啦！", "warning");
     }
     updateFavoriteIcons();
 }
@@ -4138,7 +4138,7 @@ async function downloadWithQuality(event, index, type, quality) {
         await downloadSong(song, quality);
     } catch (error) {
         console.error("下载失败:", error);
-        showNotification("下载失败，请稍后重试", "error");
+        showNotification("小贾下载失败：下载失败，请稍后重试", "error");
     }
 }
 
@@ -4178,11 +4178,11 @@ async function playSearchResult(index) {
         await playSong(song);
         updatePlayModeUI();
 
-        showNotification(`正在播放: ${song.name}`);
+        showNotification(`小贾播放：正在播放: ${song.name}`);
 
     } catch (error) {
         console.error("播放失败:", error);
-        showNotification("播放失败，请稍后重试", "error");
+        showNotification("小贾播放失败：播放失败，请稍后重试", "error");
     }
 }
 
@@ -4352,7 +4352,7 @@ function updatePlaylistActionStates() {
 
 function exportPlaylist() {
     if (!Array.isArray(state.playlistSongs) || state.playlistSongs.length === 0) {
-        showNotification("播放列表为空，无法导出", "warning");
+        showNotification("隐雾藏提醒：播放列表为空，无法导出", "warning");
         return;
     }
 
@@ -4378,10 +4378,10 @@ function exportPlaylist() {
         anchor.click();
         document.body.removeChild(anchor);
         URL.revokeObjectURL(url);
-        showNotification(`已导出 ${state.playlistSongs.length} 首歌曲`, "success");
+        showNotification(`小贾导出：已导出 ${state.playlistSongs.length} 首歌曲`, "success");
     } catch (error) {
         console.error("导出播放列表失败:", error);
-        showNotification("导出失败，请稍后重试", "error");
+        showNotification("隐雾藏导出失败：导出失败，请稍后重试", "error");
     }
 }
 
@@ -4457,13 +4457,13 @@ function handleImportPlaylistChange(event) {
             const { added, duplicates } = handleImportedPlaylistItems(items);
             if (added > 0) {
                 const duplicateHint = duplicates > 0 ? `，${duplicates} 首已存在` : "";
-                showNotification(`成功导入 ${added} 首歌曲${duplicateHint}`, "success");
+                showNotification(`小贾超棒：太棒了~ 成功导入 ${added} 首歌曲${duplicateHint}！`, "success");
             } else {
-                showNotification("文件中的歌曲已在播放列表中", "warning");
+                showNotification("隐雾藏提示：哦~ 文件中的歌曲已经在播放列表里啦！", "warning");
             }
         } catch (error) {
             console.error("导入播放列表失败:", error);
-            showNotification("导入失败，请确认文件格式", "error");
+            showNotification("哎呀~ 导入失败了，检查一下文件格式吧！", "error");
         } finally {
             if (input) {
                 input.value = "";
@@ -4473,7 +4473,7 @@ function handleImportPlaylistChange(event) {
 
     reader.onerror = () => {
         console.error("读取播放列表文件失败:", reader.error);
-        showNotification("无法读取播放列表文件", "error");
+        showNotification("小贾检查：哎呀~ 无法读取播放列表文件！", "error");
         if (input) {
             input.value = "";
         }
@@ -4696,7 +4696,7 @@ function removeFromPlaylist(index) {
 
     updatePlaylistActionStates();
     savePlayerState();
-    showNotification("已从播放列表移除", "success");
+    showNotification("小贾清理：已从播放列表移除", "success");
     clearLyricsIfLibraryEmpty();
 }
 
@@ -4839,7 +4839,7 @@ function toggleFavorite(song) {
     const normalizedSong = sanitizeImportedSong(song) || { ...song };
     const key = getSongKey(normalizedSong);
     if (!key) {
-        showNotification("无法收藏该歌曲", "error");
+        showNotification("隐雾藏收藏：无法收藏该歌曲", "error");
         return;
     }
 
@@ -4848,12 +4848,12 @@ function toggleFavorite(song) {
 
     if (existingIndex >= 0) {
         removeFavoriteAtIndex(existingIndex);
-        showNotification("已从收藏列表移除", "success");
+        showNotification("小贾收藏：已从收藏列表移除", "success");
     } else {
         favorites.push(normalizedSong);
         saveFavoriteState();
         renderFavorites();
-        showNotification("已添加到收藏列表", "success");
+        showNotification("小贾收藏：已添加到收藏列表", "success");
     }
 }
 
@@ -5070,13 +5070,13 @@ function handleImportFavoritesChange(event) {
             const { added, duplicates } = handleImportedFavoriteItems(items);
             if (added > 0) {
                 const duplicateHint = duplicates > 0 ? `，${duplicates} 首已存在` : "";
-                showNotification(`成功导入 ${added} 首收藏歌曲${duplicateHint}`, "success");
+                showNotification(`小贾偷笑：嘿嘿~ 成功导入 ${added} 首收藏歌曲${duplicateHint}！`, "success");
             } else {
-                showNotification("文件中的歌曲已在收藏列表中", "warning");
+                showNotification("隐雾藏检查：嗯~ 文件中的歌曲已经在收藏列表里啦！", "warning");
             }
         } catch (error) {
             console.error("导入收藏列表失败:", error);
-            showNotification("导入收藏列表失败，请确认文件格式", "error");
+            showNotification("糟糕~ 导入收藏列表失败了，检查文件格式哦！", "error");
         } finally {
             if (input) {
                 input.value = "";
@@ -5086,7 +5086,7 @@ function handleImportFavoritesChange(event) {
 
     reader.onerror = () => {
         console.error("读取收藏列表文件失败:", reader.error);
-        showNotification("无法读取收藏列表文件", "error");
+        showNotification("糟糕~ 无法读取收藏列表文件！", "error");
         if (input) {
             input.value = "";
         }
@@ -5156,7 +5156,7 @@ async function playPlaylistSong(index) {
         }
     } catch (error) {
         console.error("播放失败:", error);
-        showNotification("播放失败，请稍后重试", "error");
+        showNotification("小贾播放失败：播放失败，请稍后重试", "error");
     }
 }
 
@@ -5543,7 +5543,7 @@ async function playOnlineSong(index) {
         updatePlayModeUI();
     } catch (error) {
         console.error("播放失败:", error);
-        showNotification("播放失败，请稍后重试", "error");
+        showNotification("小贾播放失败：播放失败，请稍后重试", "error");
     }
 }
 
@@ -5924,13 +5924,13 @@ async function downloadSong(song, quality = "320") {
             link.click();
             document.body.removeChild(link);
 
-            showNotification("下载已开始", "success");
+            showNotification("小贾下载：下载已开始", "success");
         } else {
             throw new Error("无法获取下载地址");
         }
     } catch (error) {
         console.error("下载失败:", error);
-        showNotification("下载失败，请稍后重试", "error");
+        showNotification("小贾下载失败：下载失败，请稍后重试", "error");
     }
 }
 
