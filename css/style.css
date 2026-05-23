@@ -981,6 +981,13 @@ body.dark-mode .playlist-action-btn {
     color: var(--warning-color);
 }
 
+.playlist-action-btn--online-import:hover:not(:disabled),
+.playlist-action-btn--online-import:focus-visible:not(:disabled) {
+    box-shadow: 0 14px 30px rgba(52, 152, 219, 0.25);
+    border-color: rgba(52, 152, 219, 0.4);
+    color: #3498db;
+}
+
 .playlist-action-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -997,17 +1004,226 @@ body.dark-mode .playlist-action-btn {
     display: none;
 }
 
-html.mobile-view .playlist-header {
-    position: static;
-    top: auto;
-    left: auto;
-    right: auto;
+/* 在线导入歌单面板 */
+.online-import-panel {
+    margin: 0 20px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    overflow: hidden;
+    transition: opacity 0.25s ease, max-height 0.3s ease, margin 0.25s ease;
+}
+
+body.dark-mode .online-import-panel {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(24, 30, 40, 0.7);
+}
+
+.online-import-panel[hidden] {
+    display: none;
+}
+
+.online-import-header {
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    margin-bottom: 12px;
-    pointer-events: auto;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px 8px;
+}
+
+.online-import-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary-color);
+}
+
+.online-import-close {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary-color);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.online-import-close:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-primary-color);
+}
+
+body.dark-mode .online-import-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.online-import-body {
+    padding: 0 14px 12px;
+}
+
+.online-import-input-row {
+    margin-bottom: 10px;
+}
+
+.online-import-url-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--text-primary-color);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+body.dark-mode .online-import-url-input {
+    background: rgba(18, 22, 30, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.online-import-url-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.12);
+}
+
+.online-import-url-input::placeholder {
+    color: var(--text-secondary-color);
+    opacity: 0.6;
+}
+
+.online-import-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.online-import-source-select {
+    padding: 8px 32px 8px 12px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--text-primary-color);
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 14px;
+    min-width: 100px;
+}
+
+body.dark-mode .online-import-source-select {
+    background-color: rgba(18, 22, 30, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.online-import-source-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.12);
+}
+
+.online-import-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-dark));
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.online-import-submit-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(26, 188, 156, 0.35);
+}
+
+.online-import-submit-btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.online-import-submit-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.online-import-submit-btn .fa-spinner {
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.online-import-status {
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.online-import-status:not([hidden]) {
+    display: block;
+}
+
+.online-import-status--loading {
+    background: rgba(26, 188, 156, 0.08);
+    color: var(--primary-color);
+}
+
+.online-import-status--success {
+    background: rgba(46, 204, 113, 0.1);
+    color: #27ae60;
+}
+
+.online-import-status--error {
+    background: rgba(231, 76, 60, 0.1);
+    color: #c0392b;
+}
+
+body.dark-mode .online-import-status--success {
+    color: #2ecc71;
+}
+
+body.dark-mode .online-import-status--error {
+    color: #e74c3c;
+}
+
+html.mobile-view .online-import-panel {
+    margin: 0 0 12px;
+    border-radius: 10px;
+}
+
+html.mobile-view .online-import-url-input {
+    font-size: 16px !important;
+    padding: 12px 14px !important;
+}
+
+html.mobile-view .online-import-source-select {
+    font-size: 14px !important;
+    padding: 10px 32px 10px 12px !important;
+}
+
+html.mobile-view .online-import-submit-btn {
+    font-size: 14px !important;
+    padding: 10px 20px !important;
 }
 
 html.mobile-view #playlist.playlist .playlist-header {

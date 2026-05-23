@@ -253,6 +253,15 @@
                                 <i class="fas fa-file-import" aria-hidden="true"></i>
                             </button>
                             <button
+                                id="mobileOnlineImportPlaylistBtn"
+                                class="mobile-panel-action-btn mobile-panel-online-import-btn"
+                                type="button"
+                                aria-label="在线导入歌单"
+                                title="在线导入歌单(网易云/QQ音乐/酷狗)"
+                            >
+                                <i class="fas fa-cloud-download-alt" aria-hidden="true"></i>
+                            </button>
+                            <button
                                 id="mobileExportPlaylistBtn"
                                 class="mobile-panel-action-btn"
                                 type="button"
@@ -294,6 +303,15 @@
                                 title="导入收藏列表"
                             >
                                 <i class="fas fa-file-import" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                id="mobileOnlineImportFavoritesBtn"
+                                class="mobile-panel-action-btn mobile-panel-online-import-btn"
+                                type="button"
+                                aria-label="在线导入歌单"
+                                title="在线导入歌单(网易云/QQ音乐/酷狗)"
+                            >
+                                <i class="fas fa-cloud-download-alt" aria-hidden="true"></i>
                             </button>
                             <button
                                 id="mobileExportFavoritesBtn"
@@ -360,6 +378,15 @@
                                 <i class="fas fa-file-import" aria-hidden="true"></i>
                             </button>
                             <button
+                                class="playlist-action-btn playlist-action-btn--online-import"
+                                id="onlineImportPlaylistBtn"
+                                type="button"
+                                title="在线导入歌单(网易云/QQ音乐/酷狗)"
+                                aria-label="在线导入歌单"
+                            >
+                                <i class="fas fa-cloud-download-alt" aria-hidden="true"></i>
+                            </button>
+                            <button
                                 class="playlist-action-btn playlist-action-btn--export"
                                 id="exportPlaylistBtn"
                                 type="button"
@@ -378,6 +405,44 @@
                             >
                                 <i class="fas fa-trash" aria-hidden="true"></i>
                             </button>
+                        </div>
+                    </div>
+                    <div class="online-import-panel" id="playlistOnlineImportPanel" hidden>
+                        <div class="online-import-header">
+                            <span class="online-import-title">在线导入歌单</span>
+                            <button class="online-import-close" id="playlistOnlineImportClose" type="button" aria-label="关闭在线导入">
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="online-import-body">
+                            <div class="online-import-input-row">
+                                <input
+                                    type="text"
+                                    id="playlistImportUrlInput"
+                                    class="online-import-url-input"
+                                    placeholder="粘贴歌单链接或ID，支持网易云/QQ音乐/酷狗"
+                                    autocomplete="off"
+                                />
+                            </div>
+                            <div class="online-import-actions">
+                                <div class="online-import-source-wrapper">
+                                    <select id="playlistImportSourceSelect" class="online-import-source-select">
+                                        <option value="">自动识别</option>
+                                        <option value="netease">网易云音乐</option>
+                                        <option value="qq">QQ音乐</option>
+                                        <option value="kuwo">酷狗音乐</option>
+                                    </select>
+                                </div>
+                                <button
+                                    id="playlistOnlineImportSubmit"
+                                    class="online-import-submit-btn"
+                                    type="button"
+                                >
+                                    <i class="fas fa-download" aria-hidden="true"></i>
+                                    <span>导入歌单</span>
+                                </button>
+                            </div>
+                            <div class="online-import-status" id="playlistOnlineImportStatus" hidden></div>
                         </div>
                     </div>
                     <div class="playlist-scroll">
@@ -431,6 +496,15 @@
                                 <i class="fas fa-file-import" aria-hidden="true"></i>
                             </button>
                             <button
+                                class="playlist-action-btn playlist-action-btn--online-import"
+                                id="onlineImportFavoritesBtn"
+                                type="button"
+                                title="在线导入歌单(网易云/QQ音乐/酷狗)"
+                                aria-label="在线导入歌单"
+                            >
+                                <i class="fas fa-cloud-download-alt" aria-hidden="true"></i>
+                            </button>
+                            <button
                                 class="playlist-action-btn"
                                 id="exportFavoritesBtn"
                                 type="button"
@@ -448,6 +522,44 @@
                             >
                                 <i class="fas fa-trash" aria-hidden="true"></i>
                             </button>
+                        </div>
+                    </div>
+                    <div class="online-import-panel" id="favoritesOnlineImportPanel" hidden>
+                        <div class="online-import-header">
+                            <span class="online-import-title">在线导入歌单</span>
+                            <button class="online-import-close" id="favoritesOnlineImportClose" type="button" aria-label="关闭在线导入">
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="online-import-body">
+                            <div class="online-import-input-row">
+                                <input
+                                    type="text"
+                                    id="favoritesImportUrlInput"
+                                    class="online-import-url-input"
+                                    placeholder="粘贴歌单链接或ID，支持网易云/QQ音乐/酷狗"
+                                    autocomplete="off"
+                                />
+                            </div>
+                            <div class="online-import-actions">
+                                <div class="online-import-source-wrapper">
+                                    <select id="favoritesImportSourceSelect" class="online-import-source-select">
+                                        <option value="">自动识别</option>
+                                        <option value="netease">网易云音乐</option>
+                                        <option value="qq">QQ音乐</option>
+                                        <option value="kuwo">酷狗音乐</option>
+                                    </select>
+                                </div>
+                                <button
+                                    id="favoritesOnlineImportSubmit"
+                                    class="online-import-submit-btn"
+                                    type="button"
+                                >
+                                    <i class="fas fa-download" aria-hidden="true"></i>
+                                    <span>导入歌单</span>
+                                </button>
+                            </div>
+                            <div class="online-import-status" id="favoritesOnlineImportStatus" hidden></div>
                         </div>
                     </div>
                     <div class="playlist-scroll">

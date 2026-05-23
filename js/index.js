@@ -77,6 +77,22 @@ const dom = {
     importFavoritesInput: document.getElementById("importFavoritesInput"),
     clearFavoritesBtn: document.getElementById("clearFavoritesBtn"),
     currentFavoriteToggle: document.getElementById("currentFavoriteToggle"),
+    onlineImportPlaylistBtn: document.getElementById("onlineImportPlaylistBtn"),
+    playlistOnlineImportPanel: document.getElementById("playlistOnlineImportPanel"),
+    playlistOnlineImportClose: document.getElementById("playlistOnlineImportClose"),
+    playlistImportUrlInput: document.getElementById("playlistImportUrlInput"),
+    playlistImportSourceSelect: document.getElementById("playlistImportSourceSelect"),
+    playlistOnlineImportSubmit: document.getElementById("playlistOnlineImportSubmit"),
+    playlistOnlineImportStatus: document.getElementById("playlistOnlineImportStatus"),
+    onlineImportFavoritesBtn: document.getElementById("onlineImportFavoritesBtn"),
+    favoritesOnlineImportPanel: document.getElementById("favoritesOnlineImportPanel"),
+    favoritesOnlineImportClose: document.getElementById("favoritesOnlineImportClose"),
+    favoritesImportUrlInput: document.getElementById("favoritesImportUrlInput"),
+    favoritesImportSourceSelect: document.getElementById("favoritesImportSourceSelect"),
+    favoritesOnlineImportSubmit: document.getElementById("favoritesOnlineImportSubmit"),
+    favoritesOnlineImportStatus: document.getElementById("favoritesOnlineImportStatus"),
+    mobileOnlineImportPlaylistBtn: document.getElementById("mobileOnlineImportPlaylistBtn"),
+    mobileOnlineImportFavoritesBtn: document.getElementById("mobileOnlineImportFavoritesBtn"),
 };
 
 window.SolaraDom = dom;
@@ -873,6 +889,87 @@ const API = {
         }
     },
 
+    fetchExternalPlaylist: async (playlistId, source = "netease", limit = 200) => {
+        const signature = API.generateSignature();
+        const params = new URLSearchParams({
+            types: "playlist",
+            id: playlistId,
+            source: source,
+            limit: String(Math.max(1, Math.min(500, Math.trunc(limit)) || 100)),
+            s: signature,
+        });
+        const url = `${API.baseUrl}?${params.toString()}`;
+
+        try {
+            const data = await API.fetchJson(url);
+            const playlistInfo = data && data.playlist;
+            if (!playlistInfo) {
+                throw new Error("PLAYLIST_NOT_FOUND");
+            }
+            const tracks = Array.isArray(playlistInfo.tracks) ? playlistInfo.tracks : [];
+
+            if (tracks.length === 0) {
+                throw new Error("NO_TRACKS");
+            }
+
+            const songs = tracks.map((track) => {
+                const artistValue = Array.isArray(track.ar)
+                    ? track.ar.map((a) => a.name).join(" / ")
+                    : (typeof track.artist === "string" ? track.artist : "");
+
+                let picId = "";
+                if (track.al && typeof track.al === "object") {
+                    picId = track.al.pic_str || track.al.pic || track.al.picUrl || track.al.pic_id || "";
+                }
+
+                return {
+                    id: track.id || "",
+                    name: track.name || "",
+                    artist: artistValue || "未知艺术家",
+                    album: (track.al && track.al.name) || track.album || "",
+                    source: source,
+                    lyric_id: track.lyric_id || track.id || "",
+                    pic_id: picId || track.pic_id || track.pic || "",
+                    url_id: track.url_id || track.id || "",
+                };
+            });
+
+            return {
+                title: playlistInfo.name || "",
+                description: playlistInfo.description || "",
+                cover: playlistInfo.coverImgUrl || playlistInfo.picUrl || "",
+                trackCount: playlistInfo.trackCount || songs.length,
+                songs,
+            };
+        } catch (error) {
+            console.error("获取外部歌单失败:", error);
+            throw error;
+        }
+    },
+
+    fetchPlaylistByKeyword: async (keyword, source = "netease", limit = 200) => {
+        try {
+            const results = await API.search(keyword, source, Math.min(limit, 100), 1);
+            if (!Array.isArray(results) || results.length === 0) {
+                throw new Error("NO_RESULTS");
+            }
+            const songs = results.map((song) => ({
+                id: song.id,
+                name: song.name,
+                artist: Array.isArray(song.artist) ? song.artist.join(" / ") : (song.artist || "未知艺术家"),
+                album: song.album || "",
+                source: song.source || source,
+                lyric_id: song.lyric_id || song.id,
+                pic_id: song.pic_id || song.pic || "",
+                url_id: song.url_id,
+            }));
+            return { title: keyword, description: "", cover: "", trackCount: songs.length, songs };
+        } catch (error) {
+            console.error("关键词搜索歌单失败:", error);
+            throw error;
+        }
+    },
+
     getSongUrl: (song, quality = "320") => {
         const signature = API.generateSignature();
         return `${API.baseUrl}?types=url&id=${song.id}&source=${song.source || "netease"}&br=${quality}&s=${signature}`;
@@ -890,6 +987,121 @@ const API = {
 };
 
 Object.freeze(API);
+
+const PLAYLIST_URL_PATTERNS = [
+    {
+        name: "网易云音乐",
+        source: "netease",
+        hosts: ["music.163.com", "163cn.tv", "music.163.com"],
+        patterns: [
+            /playlist[\/\?=&#]+(\d+)/i,
+            /[?&]id=(\d+)/i,
+            /\/playlist\/(\d+)/i,
+            /\/song\/playlist\/(\d+)/i,
+        ],
+    },
+    {
+        name: "QQ音乐",
+        source: "qq",
+        hosts: ["y.qq.com", "i.y.qq.com", "c.y.qq.com"],
+        patterns: [
+            /[?&]id=(\d+)/i,
+            /\/playlist\/(\d+)/i,
+            /\/taoge\/(\d+)/i,
+            /\/songlist\/(\d+)/i,
+            /\/detail\/(\d+)/i,
+        ],
+    },
+    {
+        name: "酷狗音乐",
+        source: "kuwo",
+        hosts: ["kugou.com", "www.kugou.com", "m.kugou.com"],
+        patterns: [
+            /[?&]id=(\d+)/i,
+            /\/special\/single\/(\d+)/i,
+            /\/yy\/special\/single\/(\d+)/i,
+            /\/playlist\/(\d+)/i,
+            /\/album\/(\d+)/i,
+        ],
+    },
+    {
+        name: "酷我音乐",
+        source: "kuwo",
+        hosts: ["kuwo.cn", "www.kuwo.cn", "m.kuwo.cn"],
+        patterns: [
+            /[?&]id=(\d+)/i,
+            /\/playlist\/(\d+)/i,
+            /\/detail\/(\d+)/i,
+            /\/album\/(\d+)/i,
+        ],
+    },
+];
+
+const PLAYLIST_IMPORT_SOURCE_OPTIONS = [
+    { value: "", label: "自动识别" },
+    { value: "netease", label: "网易云音乐" },
+    { value: "qq", label: "QQ音乐" },
+    { value: "kuwo", label: "酷狗音乐" },
+    { value: "kuwo", label: "酷我音乐" },
+];
+
+function parsePlaylistUrl(input) {
+    const trimmed = (input || "").trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    if (/^\d+$/.test(trimmed)) {
+        return { id: trimmed, source: "netease", name: "网易云音乐", confidence: "id_only" };
+    }
+
+    let urlObj;
+    try {
+        if (!/^https?:\/\//i.test(trimmed)) {
+            urlObj = new URL("https://" + trimmed);
+        } else {
+            urlObj = new URL(trimmed);
+        }
+    } catch (_) {
+        return { id: trimmed, source: "netease", name: "网易云音乐", confidence: "text_as_id" };
+    }
+
+    const hostname = (urlObj.hostname || "").toLowerCase();
+
+    for (const platform of PLAYLIST_URL_PATTERNS) {
+        const matchesHost = platform.hosts.some((host) =>
+            hostname === host || hostname.endsWith("." + host)
+        );
+        if (!matchesHost) {
+            continue;
+        }
+        for (const pattern of platform.patterns) {
+            let match = pattern.exec(urlObj.pathname + urlObj.search + urlObj.hash);
+            if (!match) {
+                match = pattern.exec(urlObj.href);
+            }
+            if (match && match[1]) {
+                return {
+                    id: match[1],
+                    source: platform.source,
+                    name: platform.name,
+                    confidence: "url_recognized",
+                };
+            }
+        }
+        const hashMatch = (urlObj.hash || "").match(/[?&]id=(\d+)/i);
+        if (hashMatch) {
+            return {
+                id: hashMatch[1],
+                source: platform.source,
+                name: platform.name,
+                confidence: "hash_recognized",
+            };
+        }
+    }
+
+    return { id: trimmed, source: "netease", name: "未知平台", confidence: "url_unknown" };
+}
 
 const state = {
     onlineSongs: [],
@@ -3178,6 +3390,137 @@ function setupInteractions() {
         dom.mobileExportPlaylistBtn.addEventListener("click", exportPlaylist);
     }
 
+    if (dom.mobileOnlineImportPlaylistBtn) {
+        dom.mobileOnlineImportPlaylistBtn.addEventListener("click", () => {
+            if (dom.playlistOnlineImportPanel) {
+                const panel = dom.playlistOnlineImportPanel;
+                const isHidden = panel.hasAttribute("hidden");
+                if (isHidden) {
+                    panel.removeAttribute("hidden");
+                    if (dom.playlistImportUrlInput) {
+                        dom.playlistImportUrlInput.value = "";
+                        dom.playlistImportUrlInput.focus();
+                    }
+                    if (dom.playlistOnlineImportStatus) {
+                        dom.playlistOnlineImportStatus.setAttribute("hidden", "");
+                    }
+                } else {
+                    panel.setAttribute("hidden", "");
+                }
+            }
+        });
+    }
+
+    if (dom.onlineImportPlaylistBtn && dom.playlistOnlineImportPanel) {
+        dom.onlineImportPlaylistBtn.addEventListener("click", () => {
+            const panel = dom.playlistOnlineImportPanel;
+            const isHidden = panel.hasAttribute("hidden");
+            if (isHidden) {
+                panel.removeAttribute("hidden");
+                if (dom.playlistImportUrlInput) {
+                    dom.playlistImportUrlInput.value = "";
+                    dom.playlistImportUrlInput.focus();
+                }
+                if (dom.playlistOnlineImportStatus) {
+                    dom.playlistOnlineImportStatus.setAttribute("hidden", "");
+                }
+            } else {
+                panel.setAttribute("hidden", "");
+            }
+        });
+
+        if (dom.playlistOnlineImportClose) {
+            dom.playlistOnlineImportClose.addEventListener("click", () => {
+                dom.playlistOnlineImportPanel.setAttribute("hidden", "");
+                if (dom.playlistImportUrlInput) {
+                    dom.playlistImportUrlInput.value = "";
+                }
+            });
+        }
+
+        if (dom.playlistOnlineImportSubmit) {
+            dom.playlistOnlineImportSubmit.addEventListener("click", () => {
+                handleOnlinePlaylistImport(
+                    "playlist",
+                    dom.playlistImportUrlInput,
+                    dom.playlistImportSourceSelect,
+                    dom.playlistOnlineImportStatus,
+                    dom.playlistOnlineImportSubmit
+                );
+            });
+        }
+
+        if (dom.playlistImportUrlInput) {
+            dom.playlistImportUrlInput.addEventListener("keydown", (event) => {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    handleOnlinePlaylistImport(
+                        "playlist",
+                        dom.playlistImportUrlInput,
+                        dom.playlistImportSourceSelect,
+                        dom.playlistOnlineImportStatus,
+                        dom.playlistOnlineImportSubmit
+                    );
+                }
+            });
+        }
+    }
+
+    if (dom.onlineImportFavoritesBtn && dom.favoritesOnlineImportPanel) {
+        dom.onlineImportFavoritesBtn.addEventListener("click", () => {
+            const panel = dom.favoritesOnlineImportPanel;
+            const isHidden = panel.hasAttribute("hidden");
+            if (isHidden) {
+                panel.removeAttribute("hidden");
+                if (dom.favoritesImportUrlInput) {
+                    dom.favoritesImportUrlInput.value = "";
+                    dom.favoritesImportUrlInput.focus();
+                }
+                if (dom.favoritesOnlineImportStatus) {
+                    dom.favoritesOnlineImportStatus.setAttribute("hidden", "");
+                }
+            } else {
+                panel.setAttribute("hidden", "");
+            }
+        });
+
+        if (dom.favoritesOnlineImportClose) {
+            dom.favoritesOnlineImportClose.addEventListener("click", () => {
+                dom.favoritesOnlineImportPanel.setAttribute("hidden", "");
+                if (dom.favoritesImportUrlInput) {
+                    dom.favoritesImportUrlInput.value = "";
+                }
+            });
+        }
+
+        if (dom.favoritesOnlineImportSubmit) {
+            dom.favoritesOnlineImportSubmit.addEventListener("click", () => {
+                handleOnlinePlaylistImport(
+                    "favorites",
+                    dom.favoritesImportUrlInput,
+                    dom.favoritesImportSourceSelect,
+                    dom.favoritesOnlineImportStatus,
+                    dom.favoritesOnlineImportSubmit
+                );
+            });
+        }
+
+        if (dom.favoritesImportUrlInput) {
+            dom.favoritesImportUrlInput.addEventListener("keydown", (event) => {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    handleOnlinePlaylistImport(
+                        "favorites",
+                        dom.favoritesImportUrlInput,
+                        dom.favoritesImportSourceSelect,
+                        dom.favoritesOnlineImportStatus,
+                        dom.favoritesOnlineImportSubmit
+                    );
+                }
+            });
+        }
+    }
+
     if (dom.addAllFavoritesBtn) {
         dom.addAllFavoritesBtn.addEventListener("click", addAllFavoritesToPlaylist);
     }
@@ -3211,6 +3554,27 @@ function setupInteractions() {
 
     if (dom.mobileExportFavoritesBtn) {
         dom.mobileExportFavoritesBtn.addEventListener("click", exportFavorites);
+    }
+
+    if (dom.mobileOnlineImportFavoritesBtn) {
+        dom.mobileOnlineImportFavoritesBtn.addEventListener("click", () => {
+            if (dom.favoritesOnlineImportPanel) {
+                const panel = dom.favoritesOnlineImportPanel;
+                const isHidden = panel.hasAttribute("hidden");
+                if (isHidden) {
+                    panel.removeAttribute("hidden");
+                    if (dom.favoritesImportUrlInput) {
+                        dom.favoritesImportUrlInput.value = "";
+                        dom.favoritesImportUrlInput.focus();
+                    }
+                    if (dom.favoritesOnlineImportStatus) {
+                        dom.favoritesOnlineImportStatus.setAttribute("hidden", "");
+                    }
+                } else {
+                    panel.setAttribute("hidden", "");
+                }
+            }
+        });
     }
 
     if (dom.mobileClearFavoritesBtn) {
@@ -4482,6 +4846,148 @@ function handleImportPlaylistChange(event) {
     reader.readAsText(file, "utf-8");
 }
 
+async function handleOnlinePlaylistImport(targetList, urlInput, sourceSelect, statusEl, submitBtn) {
+    const rawUrl = (urlInput.value || "").trim();
+    if (!rawUrl) {
+        showNotification("请输入歌单链接或ID", "warning");
+        return;
+    }
+
+    const parsed = parsePlaylistUrl(rawUrl);
+    if (!parsed || !parsed.id) {
+        showNotification("无法识别该链接，请检查后重试", "error");
+        return;
+    }
+
+    const manualSource = (sourceSelect.value || "").trim();
+    const source = manualSource || parsed.source || "netease";
+
+    if (manualSource && parsed.name !== "未知平台" && manualSource !== parsed.source) {
+        showNotification(`手动选择来源为 ${manualSource}，将覆盖自动识别的 ${parsed.name}`, "warning");
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        const btnIcon = submitBtn.querySelector("i");
+        const btnText = submitBtn.querySelector("span");
+        if (btnIcon) {
+            btnIcon.className = "fas fa-spinner fa-spin";
+        }
+        if (btnText) {
+            btnText.textContent = "导入中...";
+        }
+    }
+
+    if (statusEl) {
+        statusEl.hidden = false;
+        statusEl.className = "online-import-status online-import-status--loading";
+        statusEl.textContent = "正在获取歌单信息...";
+    }
+
+    try {
+        const result = await API.fetchExternalPlaylist(parsed.id, source, 500);
+
+        if (!result || !Array.isArray(result.songs) || result.songs.length === 0) {
+            throw new Error("EMPTY_PLAYLIST");
+        }
+
+        if (statusEl) {
+            statusEl.textContent = `获取到歌单「${result.title || "未知歌单"}」，共 ${result.songs.length} 首歌，正在导入...`;
+        }
+
+        const isFavorites = targetList === "favorites";
+        const targetArray = isFavorites ? state.favoriteSongs : state.playlistSongs;
+
+        if (!Array.isArray(targetArray)) {
+            if (isFavorites) {
+                state.favoriteSongs = [];
+            } else {
+                state.playlistSongs = [];
+            }
+        }
+
+        const existingKeys = new Set(
+            targetArray
+                .map(getSongKey)
+                .filter((key) => typeof key === "string" && key !== "")
+        );
+
+        let added = 0;
+        let duplicates = 0;
+
+        for (const rawSong of result.songs) {
+            const song = sanitizeImportedSong(rawSong);
+            if (!song) {
+                continue;
+            }
+            const key = getSongKey(song);
+            if (key && existingKeys.has(key)) {
+                duplicates++;
+                continue;
+            }
+            targetArray.push(song);
+            if (key) {
+                existingKeys.add(key);
+            }
+            added++;
+        }
+
+        if (added > 0) {
+            if (isFavorites) {
+                renderFavorites();
+                saveFavoriteState();
+            } else {
+                renderPlaylist();
+                savePlayerState();
+            }
+
+            if (statusEl) {
+                statusEl.className = "online-import-status online-import-status--success";
+                const dupMsg = duplicates > 0 ? `，${duplicates} 首已存在` : "";
+                statusEl.textContent = `成功导入 ${added} 首歌${dupMsg}！`;
+            }
+
+            showNotification(
+                `成功从「${result.title || "在线歌单"}」导入 ${added} 首歌曲${duplicates > 0 ? "，" + duplicates + " 首重复已跳过" : ""}`,
+                "success"
+            );
+        } else {
+            if (statusEl) {
+                statusEl.className = "online-import-status online-import-status--error";
+                statusEl.textContent = "歌单中的歌曲已全部存在，无需导入";
+            }
+            showNotification("歌单中的歌曲已全部在列表中啦~", "warning");
+        }
+    } catch (error) {
+        console.error("在线导入歌单失败:", error);
+        if (statusEl) {
+            statusEl.className = "online-import-status online-import-status--error";
+            const errorMsg = error.message === "PLAYLIST_NOT_FOUND"
+                ? "未找到该歌单，请检查链接或手动选择来源"
+                : error.message === "NO_TRACKS" || error.message === "EMPTY_PLAYLIST"
+                    ? "该歌单为空，没有歌曲"
+                    : "获取歌单失败，请检查链接或网络后重试";
+            statusEl.textContent = errorMsg;
+        }
+        showNotification("导入失败：" + (error.message || "未知错误"), "error");
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            const btnIcon = submitBtn.querySelector("i");
+            const btnText = submitBtn.querySelector("span");
+            if (btnIcon) {
+                btnIcon.className = "fas fa-download";
+            }
+            if (btnText) {
+                btnText.textContent = "导入歌单";
+            }
+        }
+        if (urlInput) {
+            urlInput.value = "";
+        }
+    }
+}
+
 // 新增：渲染统一播放列表
 function renderPlaylist() {
     if (!dom.playlistItems) return;
@@ -4630,6 +5136,12 @@ function switchLibraryTab(target) {
     updateMobileLibraryActionVisibility(showFavorites);
     updateMobileClearPlaylistVisibility();
     closeImportSelectedMenu();
+    if (dom.playlistOnlineImportPanel) {
+        dom.playlistOnlineImportPanel.setAttribute("hidden", "");
+    }
+    if (dom.favoritesOnlineImportPanel) {
+        dom.favoritesOnlineImportPanel.setAttribute("hidden", "");
+    }
 }
 
 // 新增：从播放列表移除歌曲
