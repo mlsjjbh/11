@@ -113,27 +113,19 @@ async function proxyApiRequest(url: URL, request: Request): Promise<Response> {
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 async function fetchNeteasePlaylist(id: string): Promise<Response> {
-  const infoResp = await fetch(
-    `https://music.163.com/api/v3/playlist/detail?id=${encodeURIComponent(id)}`,
+  const resp = await fetch(
+    `https://music.163.com/api/playlist/detail?id=${encodeURIComponent(id)}`,
     { headers: { "User-Agent": UA, Referer: "https://music.163.com/" } }
   );
-  const info: any = await infoResp.json();
-  if (info.code !== 200 || !info.playlist) {
+  const json: any = await resp.json();
+  if (json.code !== 200 || !json.result) {
     return jsonResponse({ error: "PLAYLIST_NOT_FOUND" }, 404);
   }
 
-  const { name, description, coverImgUrl, trackCount } = info.playlist;
-
-  // Detail endpoint may limit tracks; fetch all via track/all
-  const trackResp = await fetch(
-    `https://music.163.com/api/playlist/track/all?id=${encodeURIComponent(id)}&limit=500&offset=0`,
-    { headers: { "User-Agent": UA, Referer: "https://music.163.com/" } }
-  );
-  const trackData: any = await trackResp.json();
-  const tracks = (trackData.code === 200 && trackData.songs) ? trackData.songs : (info.playlist.tracks || []);
+  const { name, description, coverImgUrl, trackCount, tracks } = json.result;
 
   return jsonResponse({
-    playlist: { name, description, coverImgUrl, trackCount: trackCount || tracks.length, tracks },
+    playlist: { name, description, coverImgUrl, trackCount: trackCount || (tracks || []).length, tracks: tracks || [] },
   }, 200);
 }
 
