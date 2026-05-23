@@ -112,11 +112,23 @@ async function proxyApiRequest(url: URL, request: Request): Promise<Response> {
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-async function fetchNeteasePlaylist(id: string): Promise<Response> {
+interface PlaylistEnv {
+  NETEASE_COOKIE?: string;
+}
+
+function neteaseHeaders(cookie: string): Record<string, string> {
+  const headers: Record<string, string> = { "User-Agent": UA, Referer: "https://music.163.com/" };
+  if (cookie) headers["Cookie"] = cookie;
+  return headers;
+}
+
+async function fetchNeteasePlaylist(id: string, cookie = ""): Promise<Response> {
+  const headers = neteaseHeaders(cookie);
+
   // Try old API first (returns full track list for most playlists)
   const oldResp = await fetch(
     `https://music.163.com/api/playlist/detail?id=${encodeURIComponent(id)}`,
-    { headers: { "User-Agent": UA, Referer: "https://music.163.com/" } }
+    { headers }
   );
   const oldJson: any = await oldResp.json();
   if (oldJson.code === 200 && oldJson.result) {
@@ -129,7 +141,7 @@ async function fetchNeteasePlaylist(id: string): Promise<Response> {
   // Fallback: v3 API (works for some IDs the old API doesn't support)
   const v3Resp = await fetch(
     `https://music.163.com/api/v3/playlist/detail?id=${encodeURIComponent(id)}`,
-    { headers: { "User-Agent": UA, Referer: "https://music.163.com/" } }
+    { headers }
   );
   const v3Json: any = await v3Resp.json();
   if (v3Json.code !== 200 || !v3Json.playlist) {
@@ -374,14 +386,14 @@ async function fetchKugouPlaylist(id: string): Promise<Response> {
   }, 200);
 }
 
-async function fetchPlaylist(url: URL, request: Request): Promise<Response> {
+async function fetchPlaylist(url: URL, request: Request, cookie = ""): Promise<Response> {
   const id = url.searchParams.get("id") || "";
   const source = (url.searchParams.get("source") || "netease").toLowerCase();
 
   if (!id) return jsonResponse({ error: "Missing id" }, 400);
 
   switch (source) {
-    case "netease": return fetchNeteasePlaylist(id);
+    case "netease": return fetchNeteasePlaylist(id, cookie);
     case "qq": return fetchQQPlaylist(id);
     case "kuwo": return fetchKuwoPlaylist(id);
     case "kugou": return fetchKugouPlaylist(id);
@@ -389,7 +401,7 @@ async function fetchPlaylist(url: URL, request: Request): Promise<Response> {
   }
 }
 
-export async function onRequest({ request }: { request: Request }): Promise<Response> {
+export async function onRequest({ request, env }: { request: Request; env: PlaylistEnv }): Promise<Response> {
   if (request.method === "OPTIONS") return handleOptions();
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response("Method not allowed", { status: 405 });
@@ -397,11 +409,12 @@ export async function onRequest({ request }: { request: Request }): Promise<Resp
 
   const url = new URL(request.url);
   const target = url.searchParams.get("target");
+  const neteaseCookie = env?.NETEASE_COOKIE || "";
 
   if (target) return proxyKuwoAudio(target, request);
 
   const types = url.searchParams.get("types");
-  if (types === "playlist") return fetchPlaylist(url, request);
+  if (types === "playlist") return fetchPlaylist(url, request, neteaseCookie);
 
   return proxyApiRequest(url, request);
 }
