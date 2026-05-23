@@ -116,18 +116,20 @@ interface PlaylistEnv {
   NETEASE_COOKIE?: string;
 }
 
-function neteaseHeaders(cookie: string): Record<string, string> {
-  const headers: Record<string, string> = { "User-Agent": UA, Referer: "https://music.163.com/" };
+function neteaseHeaders(cookie: string, playlistId = ""): Record<string, string> {
+  const referer = playlistId
+    ? `https://music.163.com/playlist?id=${playlistId}`
+    : "https://music.163.com/";
+  const headers: Record<string, string> = { "User-Agent": UA, Referer: referer };
   if (cookie) headers["Cookie"] = cookie;
   return headers;
 }
 
 async function fetchNeteasePlaylist(id: string, cookie = ""): Promise<Response> {
-  const headers = neteaseHeaders(cookie);
-
-  // Try old API first (returns full track list for most playlists)
+  // Old API with proper Referer (must match playlist page URL to avoid -447 anti-crawler)
+  const headers = neteaseHeaders(cookie, id);
   const oldResp = await fetch(
-    `https://music.163.com/api/playlist/detail?id=${encodeURIComponent(id)}`,
+    `https://music.163.com/api/playlist/detail?id=${encodeURIComponent(id)}&limit=20`,
     { headers }
   );
   const oldJson: any = await oldResp.json();
@@ -138,7 +140,7 @@ async function fetchNeteasePlaylist(id: string, cookie = ""): Promise<Response> 
     }, 200);
   }
 
-  // Fallback: v3 API (works for some IDs the old API doesn't support)
+  // Fallback: v3 API
   const v3Resp = await fetch(
     `https://music.163.com/api/v3/playlist/detail?id=${encodeURIComponent(id)}`,
     { headers }
