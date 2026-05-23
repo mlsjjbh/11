@@ -1014,14 +1014,15 @@ const PLAYLIST_URL_PATTERNS = [
     },
     {
         name: "酷狗音乐",
-        source: "kuwo",
-        hosts: ["kugou.com", "www.kugou.com", "m.kugou.com"],
+        source: "kugou",
+        hosts: ["kugou.com", "www.kugou.com", "m.kugou.com", "t1.kugou.com"],
         patterns: [
             /[?&]id=(\d+)/i,
             /\/special\/single\/(\d+)/i,
             /\/yy\/special\/single\/(\d+)/i,
             /\/playlist\/(\d+)/i,
             /\/album\/(\d+)/i,
+            /\/([a-zA-Z0-9_-]{6,32})$/i,
         ],
     },
     {
@@ -1041,7 +1042,7 @@ const PLAYLIST_IMPORT_SOURCE_OPTIONS = [
     { value: "", label: "自动识别" },
     { value: "netease", label: "网易云音乐" },
     { value: "qq", label: "QQ音乐" },
-    { value: "kuwo", label: "酷狗音乐" },
+    { value: "kugou", label: "酷狗音乐" },
     { value: "kuwo", label: "酷我音乐" },
 ];
 
