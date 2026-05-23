@@ -153,30 +153,36 @@ async function fetchQQPlaylist(id: string): Promise<Response> {
   const playlist = cdlist[0];
   if (!playlist) return jsonResponse({ error: "PLAYLIST_NOT_FOUND" }, 404);
 
+  // Decode HTML entities in playlist name (e.g. &#127911; -> 🎹)
+  const decodeHtml = (str: string) => str.replace(/&#(\d+);/g, (_: string, code: string) => String.fromCodePoint(Number(code)));
+
   const songlist = playlist.songlist || [];
-  const tracks = songlist.map((song: any) => ({
-    id: song.id || song.songmid || "",
-    name: song.name || song.title || "",
-    ar: (song.singer || song.singers || []).map((s: any) => ({
-      id: s.id || "",
-      name: typeof s === "string" ? s : (s.name || ""),
-    })),
-    al: {
-      id: song.albumid || song.album_mid || "",
-      name: song.albumname || song.album || "",
-      picUrl: song.album_pic || song.picurl || "",
-    },
-    pic_id: song.album_pic || song.pic || song.album_mid || "",
-    url_id: song.id || song.songmid || "",
-    lyric_id: song.id || song.songmid || "",
-  }));
+  const tracks = songlist.map((song: any) => {
+    const albumMid = song.albummid || song.album_mid || "";
+    return {
+      id: song.songid || song.songmid || "",
+      name: song.songname || song.songorig || song.name || "",
+      ar: (song.singer || []).map((s: any) => ({
+        id: s.id || "",
+        name: typeof s === "string" ? s : (s.name || ""),
+      })),
+      al: {
+        id: song.albumid || albumMid || "",
+        name: song.albumname || song.album || "",
+        picUrl: albumMid ? `https://y.gtimg.cn/music/photo_new/T002R300x300M000${albumMid}.jpg` : (song.album_pic || ""),
+      },
+      pic_id: albumMid || "",
+      url_id: song.songmid || song.songid || "",
+      lyric_id: song.songmid || song.songid || "",
+    };
+  });
 
   return jsonResponse({
     playlist: {
-      name: playlist.dissname || playlist.title || "",
+      name: decodeHtml(playlist.dissname || playlist.title || ""),
       description: playlist.desc || "",
       coverImgUrl: playlist.logo || playlist.picurl || playlist.cover || "",
-      trackCount: playlist.songnum || songlist.length,
+      trackCount: playlist.songnum || playlist.cur_song_num || songlist.length,
       tracks,
     },
   }, 200);

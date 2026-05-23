@@ -4948,6 +4948,17 @@ async function handleOnlinePlaylistImport(targetList, urlInput, sourceSelect, st
                 statusEl.textContent = `成功导入 ${added} 首歌${dupMsg}！`;
             }
 
+            // 导入成功后自动关闭面板，让用户看到播放列表
+            if (isFavorites) {
+                if (dom.favoritesOnlineImportPanel) {
+                    dom.favoritesOnlineImportPanel.setAttribute("hidden", "");
+                }
+            } else {
+                if (dom.playlistOnlineImportPanel) {
+                    dom.playlistOnlineImportPanel.setAttribute("hidden", "");
+                }
+            }
+
             showNotification(
                 `成功从「${result.title || "在线歌单"}」导入 ${added} 首歌曲${duplicates > 0 ? "，" + duplicates + " 首重复已跳过" : ""}`,
                 "success"
