@@ -113,17 +113,30 @@ async function proxyApiRequest(url: URL, request: Request): Promise<Response> {
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 async function fetchNeteasePlaylist(id: string): Promise<Response> {
-  const resp = await fetch(
+  // Try old API first (returns full track list for most playlists)
+  const oldResp = await fetch(
     `https://music.163.com/api/playlist/detail?id=${encodeURIComponent(id)}`,
     { headers: { "User-Agent": UA, Referer: "https://music.163.com/" } }
   );
-  const json: any = await resp.json();
-  if (json.code !== 200 || !json.result) {
+  const oldJson: any = await oldResp.json();
+  if (oldJson.code === 200 && oldJson.result) {
+    const { name, description, coverImgUrl, trackCount, tracks } = oldJson.result;
+    return jsonResponse({
+      playlist: { name, description, coverImgUrl, trackCount: trackCount || (tracks || []).length, tracks: tracks || [] },
+    }, 200);
+  }
+
+  // Fallback: v3 API (works for some IDs the old API doesn't support)
+  const v3Resp = await fetch(
+    `https://music.163.com/api/v3/playlist/detail?id=${encodeURIComponent(id)}`,
+    { headers: { "User-Agent": UA, Referer: "https://music.163.com/" } }
+  );
+  const v3Json: any = await v3Resp.json();
+  if (v3Json.code !== 200 || !v3Json.playlist) {
     return jsonResponse({ error: "PLAYLIST_NOT_FOUND" }, 404);
   }
 
-  const { name, description, coverImgUrl, trackCount, tracks } = json.result;
-
+  const { name, description, coverImgUrl, trackCount, tracks } = v3Json.playlist;
   return jsonResponse({
     playlist: { name, description, coverImgUrl, trackCount: trackCount || (tracks || []).length, tracks: tracks || [] },
   }, 200);
@@ -273,27 +286,62 @@ async function fetchKugouPlaylist(id: string): Promise<Response> {
         headers: { "User-Agent": UA },
       });
       const finalUrl = headResp.url || "";
-      const match = finalUrl.match(/special\/single\/(\d+)/i);
+      // Try standard playlist redirect pattern
+      let match = finalUrl.match(/special\/single\/(\d+)/i);
+      // Try kugou.com/yy/special/single/ID pattern
+      if (!match) match = finalUrl.match(/\/yy\/special\/single\/(\d+)/i);
+      // Try extracting specialid from query params
+      if (!match) match = finalUrl.match(/[?&]specialid=(-?\d+)/i);
+      // Try extracting from global_specialid (format: collection_X_USERID_X_X)
+      if (!match) {
+        const gsMatch = finalUrl.match(/global_specialid=collection_\d+_(\d+)_(\d+)_(\d+)/i);
+        if (gsMatch) {
+          // Use user's fav collection: try API with user ID
+          realId = gsMatch[1];
+        }
+      }
       if (match) realId = match[1];
     } catch {
       // fall through with original id
     }
   }
 
+  // Try standard special/song API
   const resp = await fetch(
     `https://mobilecdn.kugou.com/api/v3/special/song?specialid=${encodeURIComponent(realId)}&format=json&from=web`,
     {
       headers: { "User-Agent": UA, Referer: "https://www.kugou.com/" },
     }
   );
-  const json: any = await resp.json();
-  if (json.status !== 1 || !json.data) {
-    return jsonResponse({ error: "PLAYLIST_NOT_FOUND" }, 404);
+  let json: any = await resp.json();
+  let data = json.data;
+  let info: any = {};
+  let songs: any[] = [];
+
+  if (json.status === 1 && data) {
+    info = data.info || {};
+    songs = data.songs || data.list || [];
+  } else if (!/^\d+$/.test(realId)) {
+    // ID is non-numeric → might be a user collection; try user fav songs API
+    try {
+      const collResp = await fetch(
+        `https://mobilecdn.kugou.com/api/v3/user/collect?userid=${encodeURIComponent(realId)}&type=3&page=1&pagesize=500&format=json`,
+        { headers: { "User-Agent": UA, Referer: "https://www.kugou.com/" } }
+      );
+      const collJson: any = await collResp.json();
+      if (collJson.status === 1 && collJson.data) {
+        data = collJson.data;
+        info = data.info || {};
+        songs = data.songs || data.list || data.datas || [];
+      }
+    } catch {
+      // Give up
+    }
   }
 
-  const data = json.data;
-  const info = data.info || {};
-  const songs = data.songs || data.list || [];
+  if (songs.length === 0) {
+    return jsonResponse({ error: "PLAYLIST_NOT_FOUND" }, 404);
+  }
 
   const tracks = songs.map((s: any) => {
     const filename = s.filename || s.name || "";
@@ -317,9 +365,9 @@ async function fetchKugouPlaylist(id: string): Promise<Response> {
 
   return jsonResponse({
     playlist: {
-      name: info.specialname || info.name || data.specialname || "",
+      name: info.specialname || info.name || data?.specialname || data?.name || "酷狗歌单",
       description: info.description || info.desc || "",
-      coverImgUrl: info.imgurl || info.img || info.cover || data.imgurl || "",
+      coverImgUrl: info.imgurl || info.img || info.cover || data?.imgurl || "",
       trackCount: info.total || info.songcount || songs.length,
       tracks,
     },
