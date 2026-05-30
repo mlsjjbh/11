@@ -2385,3 +2385,142 @@ input[type="range"]:active::-moz-range-thumb {
     width: 100%;
     max-width: 220px;
 }
+
+/* 专辑封面旋转动画 */
+@keyframes albumSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+body.is-playing .album-cover img,
+body.is-playing .mobile-turntable__platter .album-cover img {
+    animation: albumSpin 20s linear infinite;
+    border-radius: 50%;
+}
+
+.album-cover img {
+    transition: transform 0.3s ease;
+    border-radius: 50%;
+}
+
+/* 悬浮歌词小组件 - 桌面端 */
+.desktop-floating-lyrics {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 320px;
+    background: var(--container-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    border: 1px solid var(--border-color);
+    z-index: 100;
+    display: none;
+    transition: all 0.3s ease;
+}
+
+.desktop-floating-lyrics.show {
+    display: block;
+}
+
+.desktop-floating-lyrics__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.desktop-floating-lyrics__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.desktop-floating-lyrics__close {
+    background: none;
+    border: none;
+    color: var(--text-secondary-color);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 14px;
+}
+
+.desktop-floating-lyrics__content {
+    max-height: 120px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.desktop-floating-lyrics__line {
+    padding: 6px 8px;
+    font-size: 13px;
+    color: var(--text-secondary-color);
+    transition: all 0.3s ease;
+    border-radius: 8px;
+}
+
+.desktop-floating-lyrics__line.current {
+    color: var(--primary-color);
+    background: var(--lyrics-highlight-bg);
+    font-weight: 500;
+    transform: scale(1.02);
+}
+
+/* 移动端悬浮歌词条 */
+.mobile-floating-lyrics {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 360px;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 25px;
+    padding: 12px 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    z-index: 1000;
+    display: none;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.mobile-floating-lyrics.show {
+    display: block;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.mobile-floating-lyrics__text {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mobile-floating-lyrics__song-info {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

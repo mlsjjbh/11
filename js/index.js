@@ -6496,3 +6496,171 @@ function showNotification(message, type = "success") {
         notification.classList.remove("show");
     }, 3000);
 }
+
+// ==== 悬浮歌词功能 ====
+const floatingLyrics = {
+    desktopWidget: null,
+    desktopContent: null,
+    mobileWidget: null,
+    mobileText: null,
+    mobileSongInfo: null,
+    initialized: false,
+
+    init() {
+        if (this.initialized) return;
+        this.initialized = true;
+
+        this.desktopWidget = document.getElementById("desktopFloatingLyrics");
+        this.desktopContent = document.getElementById("desktopFloatingLyricsContent");
+        this.mobileWidget = document.getElementById("mobileFloatingLyrics");
+        this.mobileText = document.getElementById("mobileFloatingLyricsText");
+        this.mobileSongInfo = document.getElementById("mobileFloatingLyricsSongInfo");
+
+        const desktopCloseBtn = document.getElementById("desktopFloatingLyricsClose");
+        if (desktopCloseBtn) {
+            desktopCloseBtn.addEventListener("click", () => this.hideDesktop());
+        }
+
+        this.syncLyrics();
+    },
+
+    showDesktop() {
+        if (this.desktopWidget) {
+            this.desktopWidget.classList.add("show");
+        }
+    },
+
+    hideDesktop() {
+        if (this.desktopWidget) {
+            this.desktopWidget.classList.remove("show");
+        }
+    },
+
+    toggleDesktop() {
+        if (this.desktopWidget) {
+            this.desktopWidget.classList.toggle("show");
+        }
+    },
+
+    showMobile() {
+        if (this.mobileWidget) {
+            this.mobileWidget.classList.add("show");
+        }
+    },
+
+    hideMobile() {
+        if (this.mobileWidget) {
+            this.mobileWidget.classList.remove("show");
+        }
+    },
+
+    toggleMobile() {
+        if (this.mobileWidget) {
+            this.mobileWidget.classList.toggle("show");
+        }
+    },
+
+    updateLyricsDisplay(lyricsData, currentIndex) {
+        // 更新桌面端悬浮歌词
+        if (this.desktopContent && Array.isArray(lyricsData)) {
+            const html = lyricsData.map((lyric, index) => {
+                const isCurrent = index === currentIndex;
+                return `<div class="desktop-floating-lyrics__line${isCurrent ? ' current' : ''}">${lyric.text || '...'}</div>`;
+            }).join("");
+            this.desktopContent.innerHTML = html;
+
+            // 滚动到当前歌词
+            const currentLine = this.desktopContent.querySelector(".current");
+            if (currentLine) {
+                currentLine.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        }
+
+        // 更新移动端悬浮歌词
+        if (this.mobileText && Array.isArray(lyricsData) && currentIndex >= 0 && currentIndex < lyricsData.length) {
+            this.mobileText.textContent = lyricsData[currentIndex].text || "...";
+        } else if (this.mobileText) {
+            this.mobileText.textContent = "暂无歌词";
+        }
+    },
+
+    updateSongInfo(song) {
+        if (this.mobileSongInfo && song) {
+            const artist = Array.isArray(song.artist) ? song.artist.join(", ") : (song.artist || "");
+            this.mobileSongInfo.textContent = `${song.name || ""} ${artist ? "- " + artist : ""}`;
+        }
+    },
+
+    syncLyrics() {
+        if (state.lyricsData.length === 0) return;
+
+        const currentTime = dom.audioPlayer.currentTime;
+        let currentIndex = -1;
+
+        for (let i = 0; i < state.lyricsData.length; i++) {
+            if (currentTime >= state.lyricsData[i].time) {
+                currentIndex = i;
+            } else {
+                break;
+            }
+        }
+
+        this.updateLyricsDisplay(state.lyricsData, currentIndex);
+    }
+};
+
+// 初始化悬浮歌词
+window.addEventListener("load", () => {
+    floatingLyrics.init();
+});
+
+// 扩展现有的 syncLyrics 函数
+const originalSyncLyrics = window.syncLyrics;
+if (typeof originalSyncLyrics === "function") {
+    window.syncLyrics = function() {
+        originalSyncLyrics();
+        floatingLyrics.syncLyrics();
+    };
+} else {
+    // 如果 syncLyrics 不存在，直接添加监听
+    dom.audioPlayer.addEventListener("timeupdate", () => {
+        floatingLyrics.syncLyrics();
+    });
+}
+
+// 扩展现有的 updateCurrentSongInfo 函数
+const originalUpdateCurrentSongInfo = window.updateCurrentSongInfo;
+if (typeof originalUpdateCurrentSongInfo === "function") {
+    window.updateCurrentSongInfo = function(song, options) {
+        const result = originalUpdateCurrentSongInfo(song, options);
+        floatingLyrics.updateSongInfo(song);
+        return result;
+    };
+}
+
+// 扩展 clearLyricsContent 函数
+const originalClearLyricsContent = window.clearLyricsContent;
+if (typeof originalClearLyricsContent === "function") {
+    window.clearLyricsContent = function() {
+        originalClearLyricsContent();
+        if (floatingLyrics.mobileText) {
+            floatingLyrics.mobileText.textContent = "暂无歌词";
+        }
+        if (floatingLyrics.desktopContent) {
+            floatingLyrics.desktopContent.innerHTML = "";
+        }
+    };
+}
+
+// 添加键盘快捷键：L 键切换桌面悬浮歌词
+document.addEventListener("keydown", (e) => {
+    if (e.key === "l" || e.key === "L") {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+            return;
+        }
+        floatingLyrics.toggleDesktop();
+    }
+});
+
+// 暴露到全局
+window.floatingLyrics = floatingLyrics;

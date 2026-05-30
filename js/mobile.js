@@ -157,6 +157,17 @@
         if (dom.mobileQueueToggle) {
             dom.mobileQueueToggle.addEventListener("click", () => openMobilePanelImpl("playlist"));
         }
+
+        // 悬浮歌词切换按钮
+        const mobileFloatingLyricsToggle = document.getElementById("mobileFloatingLyricsToggle");
+        if (mobileFloatingLyricsToggle) {
+            mobileFloatingLyricsToggle.addEventListener("click", () => {
+                if (window.floatingLyrics) {
+                    window.floatingLyrics.toggleMobile();
+                }
+            });
+        }
+
         const handleGlobalPointerDown = (event) => {
             if (!document.body) {
                 return;
@@ -204,6 +215,25 @@
     bridge.handlers.togglePanel = toggleMobilePanelImpl;
     bridge.handlers.closeAllOverlays = closeAllMobileOverlaysImpl;
     bridge.handlers.initialize = initializeMobileUIImpl;
+
+    // 悬浮歌词相关
+    bridge.handlers.showFloatingLyrics = function() {
+        if (window.floatingLyrics) {
+            window.floatingLyrics.showMobile();
+        }
+    };
+
+    bridge.handlers.hideFloatingLyrics = function() {
+        if (window.floatingLyrics) {
+            window.floatingLyrics.hideMobile();
+        }
+    };
+
+    bridge.handlers.toggleFloatingLyrics = function() {
+        if (window.floatingLyrics) {
+            window.floatingLyrics.toggleMobile();
+        }
+    };
 
     if (bridge.queue.length) {
         const pending = bridge.queue.splice(0, bridge.queue.length);

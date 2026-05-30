@@ -111,6 +111,9 @@
             </button>
             <div class="mobile-toolbar__title" id="mobileToolbarTitle">杞县高中音乐播放器</div>
             <div class="mobile-toolbar__actions">
+                <button class="mobile-toolbar__button" id="mobileFloatingLyricsToggle" type="button" aria-label="切换悬浮歌词">
+                    <i class="fas fa-closed-captioning" aria-hidden="true"></i>
+                </button>
                 <button class="mobile-toolbar__button" id="mobileSearchToggle" type="button" aria-label="打开搜索">
                     <i class="fas fa-search" aria-hidden="true"></i>
                 </button>
@@ -617,6 +620,23 @@
 
 <!-- 通知容器 -->
 <div id="notification" class="notification"></div>
+
+<!-- 桌面端悬浮歌词 -->
+<div id="desktopFloatingLyrics" class="desktop-floating-lyrics">
+    <div class="desktop-floating-lyrics__header">
+        <span class="desktop-floating-lyrics__title">歌词</span>
+        <button id="desktopFloatingLyricsClose" class="desktop-floating-lyrics__close" type="button">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div id="desktopFloatingLyricsContent" class="desktop-floating-lyrics__content"></div>
+</div>
+
+<!-- 移动端悬浮歌词条 -->
+<div id="mobileFloatingLyrics" class="mobile-floating-lyrics">
+    <div id="mobileFloatingLyricsText" class="mobile-floating-lyrics__text">暂无歌词</div>
+    <div id="mobileFloatingLyricsSongInfo" class="mobile-floating-lyrics__song-info"></div>
+</div>
 
 <!-- 调试信息容器 -->
 <div id="debugInfo" class="debug-info"></div>
