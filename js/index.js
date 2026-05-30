@@ -202,82 +202,31 @@ const animeAnimations = {
         this.albumAnimations.forEach(anim => anim.pause());
     },
 
-    // 通知动画
+    // 通知动画（纯 CSS，不用 GSAP）
     showNotification(message, type = 'success') {
         const notification = dom.notification;
-        if (!notification || !this.shouldAnimate()) {
-            notification.textContent = message;
-            notification.className = `notification ${type}`;
-            notification.classList.add('show');
-            setTimeout(() => notification.classList.remove('show'), 3000);
-            return;
-        }
+        if (!notification) return;
 
         notification.textContent = message;
         notification.className = `notification ${type}`;
-
-        gsap.killTweensOf(notification);
-        gsap.set(notification, { clearProps: 'all' });
         notification.classList.add('show');
 
-        const tl = gsap.timeline();
-        tl.fromTo(notification, 
-            { x: 400, scale: 0.8, opacity: 0 },
-            { x: 0, scale: 1, opacity: 1, duration: this.getDuration(0.5), ease: 'back.out(1.7)' }
-        );
-        tl.to(notification, 
-            { x: 400, scale: 0.8, opacity: 0, duration: this.getDuration(0.4), ease: 'power2.in' },
-            '+=2.5'
-        );
-        tl.call(() => {
+        clearTimeout(this._notificationTimer);
+        this._notificationTimer = setTimeout(() => {
             notification.classList.remove('show');
-            gsap.set(notification, { clearProps: 'all' });
-        });
+        }, 3000);
     },
 
-    // 悬浮歌词出现动画
+    // 悬浮歌词出现动画（纯 CSS，不用 GSAP）
     showFloatingLyrics(element) {
         if (!element) return;
-        
-        if (!this.shouldAnimate()) {
-            element.classList.add('show');
-            return;
-        }
-
-        gsap.killTweensOf(element);
-        gsap.set(element, { clearProps: 'all' });
         element.classList.add('show');
-
-        gsap.fromTo(element,
-            { opacity: 0, scale: 0.9 },
-            { 
-                opacity: 1, scale: 1, 
-                duration: this.getDuration(0.35), 
-                ease: 'back.out(1.4)',
-                clearProps: 'transform,opacity'
-            }
-        );
     },
 
-    // 悬浮歌词隐藏动画
+    // 悬浮歌词隐藏动画（纯 CSS，不用 GSAP）
     hideFloatingLyrics(element) {
         if (!element) return;
-        
-        if (!this.shouldAnimate()) {
-            element.classList.remove('show');
-            return;
-        }
-
-        gsap.killTweensOf(element);
-        gsap.to(element, {
-            opacity: 0, scale: 0.9,
-            duration: this.getDuration(0.25),
-            ease: 'power2.in',
-            onComplete: () => {
-                element.classList.remove('show');
-                gsap.set(element, { clearProps: 'all' });
-            }
-        });
+        element.classList.remove('show');
     },
 
     // 按钮点击反馈动画
