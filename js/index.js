@@ -6505,6 +6505,9 @@ const floatingLyrics = {
     mobileText: null,
     mobileSongInfo: null,
     initialized: false,
+    notificationPermission: false,
+    backgroundNotification: null,
+    lastNotificationLyric: "",
 
     init() {
         if (this.initialized) return;
@@ -6521,7 +6524,172 @@ const floatingLyrics = {
             desktopCloseBtn.addEventListener("click", () => this.hideDesktop());
         }
 
+        // 后台显示歌词按钮
+        const backgroundLyricsToggle = document.getElementById("desktopBackgroundLyricsToggle");
+        if (backgroundLyricsToggle) {
+            backgroundLyricsToggle.addEventListener("click", () => {
+                this.requestNotificationPermission().then(() => {
+                    if (this.notificationPermission) {
+                        showNotification("后台歌词显示已开启", "success");
+                    } else {
+                        showNotification("请允许通知权限以在后台显示歌词", "warning");
+                    }
+                });
+            });
+        }
+
+        // 初始化拖拽功能
+        this.initDrag();
+
+        // 请求通知权限
+        this.requestNotificationPermission();
+
         this.syncLyrics();
+    },
+
+    // 请求浏览器通知权限（用于后台显示歌词）
+    async requestNotificationPermission() {
+        if (!('Notification' in window)) {
+            console.log('浏览器不支持通知 API');
+            return;
+        }
+
+        if (Notification.permission === 'granted') {
+            this.notificationPermission = true;
+            return;
+        }
+
+        if (Notification.permission !== 'denied') {
+            try {
+                const permission = await Notification.requestPermission();
+                this.notificationPermission = permission === 'granted';
+            } catch (error) {
+                console.log('请求通知权限失败:', error);
+            }
+        }
+    },
+
+    // 在后台显示歌词通知
+    updateBackgroundNotification(lyricText, songInfo) {
+        if (!this.notificationPermission || !lyricText || lyricText === this.lastNotificationLyric) {
+            return;
+        }
+
+        this.lastNotificationLyric = lyricText;
+
+        try {
+            if (this.backgroundNotification) {
+                this.backgroundNotification.close();
+            }
+
+            const title = songInfo?.name || '正在播放';
+            const body = lyricText;
+            const icon = songInfo?.icon || '/favicon.png';
+
+            this.backgroundNotification = new Notification(title, {
+                body: body,
+                icon: icon,
+                badge: icon,
+                tag: 'floating-lyrics',
+                renotify: true,
+                silent: true
+            });
+
+            // 5秒后自动关闭
+            setTimeout(() => {
+                if (this.backgroundNotification) {
+                    this.backgroundNotification.close();
+                    this.backgroundNotification = null;
+                }
+            }, 5000);
+        } catch (error) {
+            console.log('显示通知失败:', error);
+        }
+    },
+
+    // 初始化拖拽功能
+    initDrag() {
+        if (this.desktopWidget) {
+            this.makeDraggable(this.desktopWidget);
+        }
+        if (this.mobileWidget) {
+            this.makeDraggable(this.mobileWidget);
+        }
+    },
+
+    // 使元素可拖拽
+    makeDraggable(element) {
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        const getEventPos = (e) => {
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        };
+
+        const onStart = (e) => {
+            // 如果点击的是关闭按钮，不触发拖拽
+            if (e.target.closest('.desktop-floating-lyrics__close')) {
+                return;
+            }
+
+            isDragging = true;
+            element.classList.add('dragging');
+
+            const pos = getEventPos(e);
+            startX = pos.x;
+            startY = pos.y;
+
+            const rect = element.getBoundingClientRect();
+            initialX = rect.left;
+            initialY = rect.top;
+
+            // 防止文本选择
+            e.preventDefault();
+        };
+
+        const onMove = (e) => {
+            if (!isDragging) return;
+
+            const pos = getEventPos(e);
+            const deltaX = pos.x - startX;
+            const deltaY = pos.y - startY;
+
+            let newX = initialX + deltaX;
+            let newY = initialY + deltaY;
+
+            // 边界检测
+            const rect = element.getBoundingClientRect();
+            const maxX = window.innerWidth - rect.width;
+            const maxY = window.innerHeight - rect.height;
+
+            newX = Math.max(0, Math.min(newX, maxX));
+            newY = Math.max(0, Math.min(newY, maxY));
+
+            element.style.left = newX + 'px';
+            element.style.top = newY + 'px';
+            element.style.right = 'auto';
+            element.style.bottom = 'auto';
+            element.style.transform = 'none';
+        };
+
+        const onEnd = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            element.classList.remove('dragging');
+        };
+
+        // 鼠标事件
+        element.addEventListener('mousedown', onStart);
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onEnd);
+
+        // 触摸事件
+        element.addEventListener('touchstart', onStart, { passive: false });
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onEnd);
     },
 
     showDesktop() {
@@ -6577,10 +6745,21 @@ const floatingLyrics = {
         }
 
         // 更新移动端悬浮歌词
-        if (this.mobileText && Array.isArray(lyricsData) && currentIndex >= 0 && currentIndex < lyricsData.length) {
-            this.mobileText.textContent = lyricsData[currentIndex].text || "...";
-        } else if (this.mobileText) {
-            this.mobileText.textContent = "暂无歌词";
+        const currentLyricText = (Array.isArray(lyricsData) && currentIndex >= 0 && currentIndex < lyricsData.length)
+            ? lyricsData[currentIndex].text
+            : null;
+
+        if (this.mobileText) {
+            this.mobileText.textContent = currentLyricText || "暂无歌词";
+        }
+
+        // 更新后台通知
+        const song = state.currentSong;
+        if (song && currentLyricText) {
+            this.updateBackgroundNotification(currentLyricText, {
+                name: song.name,
+                icon: state.currentArtworkUrl || '/favicon.png'
+            });
         }
     },
 
@@ -6622,7 +6801,6 @@ if (typeof originalSyncLyrics === "function") {
         floatingLyrics.syncLyrics();
     };
 } else {
-    // 如果 syncLyrics 不存在，直接添加监听
     dom.audioPlayer.addEventListener("timeupdate", () => {
         floatingLyrics.syncLyrics();
     });

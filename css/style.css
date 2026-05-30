@@ -113,11 +113,16 @@ body.background-transitioning .background-stage__layer--transition {
 .container {
     width: min(1200px, 100%);
     margin: 0 auto;
-    background: var(--container-bg);
-    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 28px;
     padding: 30px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.1);
-    border: 1px solid var(--border-color);
+    box-shadow: 
+        0 25px 80px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(255, 255, 255, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    border: none;
     aspect-ratio: 16/9;
     height: 80vh;
     max-height: 700px;
@@ -130,9 +135,17 @@ body.background-transitioning .background-stage__layer--transition {
     grid-template-rows: auto auto 1fr 80px;
     grid-template-columns: 300px 1fr 1fr;
     gap: 20px;
-    transition: background 0.5s, box-shadow 0.5s;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: visible;
     position: relative;
+}
+
+.dark-mode .container {
+    background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(20, 20, 20, 0.85));
+    box-shadow: 
+        0 25px 80px rgba(0, 0, 0, 0.35),
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* 搜索模式下的容器布局 */
@@ -154,13 +167,18 @@ body.background-transitioning .background-stage__layer--transition {
     font-size: 2.2em; 
     font-weight: 700; 
     color: var(--primary-color); 
-    letter-spacing: 1px; 
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-dark));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 .header .warning { 
     color: var(--text-secondary-color); 
     font-size: 0.9em; 
     margin-top: 10px; 
-    font-style: italic; 
+    font-style: italic;
+    opacity: 0.8;
 }
 
 /* 搜索区域样式 - 增强动效 */
@@ -2392,15 +2410,37 @@ input[type="range"]:active::-moz-range-thumb {
     to { transform: rotate(360deg); }
 }
 
-body.is-playing .album-cover img,
-body.is-playing .mobile-turntable__platter .album-cover img {
+@keyframes albumPulse {
+    0%, 100% { box-shadow: 0 8px 20px rgba(0,0,0,0.15), 0 0 0 0 rgba(26, 188, 156, 0.4); }
+    50% { box-shadow: 0 8px 20px rgba(0,0,0,0.15), 0 0 0 10px rgba(26, 188, 156, 0); }
+}
+
+/* 桌面端封面旋转 */
+.desktop-view .album-cover {
+    border-radius: 50% !important;
+    overflow: hidden;
+}
+
+.desktop-view body.is-playing .album-cover {
+    animation: albumPulse 2s ease-in-out infinite;
+}
+
+.desktop-view body.is-playing .album-cover img {
     animation: albumSpin 20s linear infinite;
-    border-radius: 50%;
 }
 
 .album-cover img {
     transition: transform 0.3s ease;
     border-radius: 50%;
+}
+
+/* 移动端封面旋转 */
+body.mobile-view body.is-playing .album-cover {
+    animation: albumPulse 2s ease-in-out infinite;
+}
+
+body.mobile-view body.is-playing .album-cover img {
+    animation: albumSpin 20s linear infinite;
 }
 
 /* 悬浮歌词小组件 - 桌面端 */
@@ -2409,118 +2449,486 @@ body.is-playing .mobile-turntable__platter .album-cover img {
     bottom: 20px;
     left: 20px;
     width: 320px;
-    background: var(--container-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 16px;
-    padding: 16px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-    border: 1px solid var(--border-color);
-    z-index: 100;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 20px;
+    padding: 0;
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    border: none;
+    z-index: 1000;
     display: none;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: move;
+    user-select: none;
+}
+
+.dark-mode .desktop-floating-lyrics {
+    background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(20, 20, 20, 0.85));
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .desktop-floating-lyrics.show {
     display: block;
+    animation: floatIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes floatIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .desktop-floating-lyrics__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-dark));
+    border-radius: 20px 20px 0 0;
+    cursor: move;
 }
 
 .desktop-floating-lyrics__title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    color: var(--primary-color);
+    color: white;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.desktop-floating-lyrics__title::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: #4ade80;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
 }
 
 .desktop-floating-lyrics__close {
-    background: none;
+    background: rgba(255, 255, 255, 0.2);
     border: none;
-    color: var(--text-secondary-color);
+    color: white;
     cursor: pointer;
-    padding: 4px;
-    font-size: 14px;
+    padding: 6px;
+    font-size: 12px;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.desktop-floating-lyrics__close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
 }
 
 .desktop-floating-lyrics__content {
-    max-height: 120px;
+    max-height: 160px;
     overflow-y: auto;
+    padding: 12px;
     scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) transparent;
+}
+
+.desktop-floating-lyrics__content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.desktop-floating-lyrics__content::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 2px;
 }
 
 .desktop-floating-lyrics__line {
-    padding: 6px 8px;
+    padding: 8px 12px;
     font-size: 13px;
     color: var(--text-secondary-color);
-    transition: all 0.3s ease;
-    border-radius: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 10px;
+    margin-bottom: 4px;
 }
 
 .desktop-floating-lyrics__line.current {
     color: var(--primary-color);
-    background: var(--lyrics-highlight-bg);
-    font-weight: 500;
+    background: linear-gradient(135deg, rgba(26, 188, 156, 0.15), rgba(26, 188, 156, 0.08));
+    font-weight: 600;
     transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(26, 188, 156, 0.15);
 }
 
 /* 移动端悬浮歌词条 */
 .mobile-floating-lyrics {
     position: fixed;
-    bottom: 80px;
+    bottom: 100px;
     left: 50%;
     transform: translateX(-50%);
-    width: 90%;
-    max-width: 360px;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 25px;
-    padding: 12px 20px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.1);
+    width: 88%;
+    max-width: 380px;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(20, 20, 20, 0.85));
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 28px;
+    padding: 14px 24px;
+    box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border: none;
     z-index: 1000;
     display: none;
     text-align: center;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: move;
+    user-select: none;
 }
 
 .mobile-floating-lyrics.show {
     display: block;
-    animation: slideUp 0.3s ease;
+    animation: mobileSlideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes slideUp {
+@keyframes mobileSlideUp {
     from {
         opacity: 0;
-        transform: translateX(-50%) translateY(20px);
+        transform: translateX(-50%) translateY(30px) scale(0.9);
     }
     to {
         opacity: 1;
-        transform: translateX(-50%) translateY(0);
+        transform: translateX(-50%) translateY(0) scale(1);
     }
 }
 
 .mobile-floating-lyrics__text {
     color: #ffffff;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.5;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.6;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    letter-spacing: 0.3px;
 }
 
 .mobile-floating-lyrics__song-info {
     font-size: 11px;
-    color: rgba(255,255,255,0.6);
-    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 6px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    letter-spacing: 0.2px;
+}
+
+/* 拖拽时的样式 */
+.desktop-floating-lyrics.dragging,
+.mobile-floating-lyrics.dragging {
+    opacity: 0.9;
+    transform: scale(1.02);
+    transition: none;
+}
+
+.desktop-floating-lyrics.dragging {
+    box-shadow: 
+        0 30px 80px rgba(0, 0, 0, 0.25),
+        0 0 0 2px var(--primary-color);
+}
+
+.mobile-floating-lyrics.dragging {
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 0 0 2px var(--primary-color);
+}
+
+/* 通知样式美化 */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-dark));
+    color: white;
+    padding: 16px 24px;
+    border-radius: 16px;
+    box-shadow: 
+        0 12px 40px rgba(26, 188, 156, 0.35),
+        0 0 0 1px rgba(255, 255, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    z-index: 10000;
+    transform: translateX(400px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(10px);
+}
+
+.notification.show {
+    transform: translateX(0);
+    animation: notificationBounce 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes notificationBounce {
+    0% { transform: translateX(400px); }
+    60% { transform: translateX(-10px); }
+    80% { transform: translateX(5px); }
+    100% { transform: translateX(0); }
+}
+
+.notification.error {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    box-shadow: 
+        0 12px 40px rgba(231, 76, 60, 0.35),
+        0 0 0 1px rgba(255, 255, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.notification.warning {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    box-shadow: 
+        0 12px 40px rgba(243, 156, 18, 0.35),
+        0 0 0 1px rgba(255, 255, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* 播放控制按钮美化 */
+.transport-button {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transport-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(26, 188, 156, 0.3);
+}
+
+.transport-button:active {
+    transform: scale(0.95);
+}
+
+.transport-button--play {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-dark));
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+        0 8px 25px rgba(26, 188, 156, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.transport-button--play:hover {
+    transform: scale(1.15);
+    box-shadow: 
+        0 12px 35px rgba(26, 188, 156, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.transport-button--play i {
+    color: white;
+    font-size: 20px;
+}
+
+/* 进度条美化 */
+.progress-container input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--primary-color) var(--progress, 0%), rgba(0, 0, 0, 0.1) var(--progress, 0%));
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.progress-container input[type="range"]:hover {
+    height: 8px;
+}
+
+.progress-container input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-dark));
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(26, 188, 156, 0.4);
+    transition: all 0.2s ease;
+}
+
+.progress-container input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 4px 12px rgba(26, 188, 156, 0.5);
+}
+
+/* 音量滑块美化 */
+.volume-container input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, var(--primary-color) var(--volume-progress, 80%), rgba(0, 0, 0, 0.1) var(--volume-progress, 80%));
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.volume-container input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-dark));
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(26, 188, 156, 0.3);
+    transition: all 0.2s ease;
+}
+
+.volume-container input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+/* 搜索按钮美化 */
+.search-btn {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-dark));
+    border: none;
+    border-radius: 12px;
+    padding: 12px 24px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+        0 4px 15px rgba(26, 188, 156, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.search-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 8px 25px rgba(26, 188, 156, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.search-btn:active {
+    transform: translateY(0);
+}
+
+/* 搜索输入框美化 */
+.search-input {
+    background: rgba(255, 255, 255, 0.8);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.dark-mode .search-input {
+    background: rgba(40, 40, 40, 0.8);
+    color: white;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(26, 188, 156, 0.1);
+}
+
+/* 列表项美化 */
+.playlist-item {
+    padding: 12px 16px;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.playlist-item:hover {
+    background: var(--item-hover-bg);
+    transform: translateX(4px);
+}
+
+.playlist-item.current {
+    background: linear-gradient(135deg, rgba(26, 188, 156, 0.15), rgba(26, 188, 156, 0.08));
+    border-left: 3px solid var(--primary-color);
+}
+
+/* 主题切换按钮美化 */
+.theme-toggle-button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+    border: 2px solid rgba(26, 188, 156, 0.3);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+        0 4px 15px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.dark-mode .theme-toggle-button {
+    background: linear-gradient(135deg, rgba(40, 40, 40, 0.9), rgba(30, 30, 30, 0.7));
+    border-color: rgba(26, 188, 156, 0.5);
+}
+
+.theme-toggle-button:hover {
+    transform: scale(1.1) rotate(15deg);
+    box-shadow: 
+        0 8px 25px rgba(26, 188, 156, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* 加载动画 */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.loader {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        transform: translateY(-100px);
+    }
+    
+    .notification.show {
+        transform: translateY(0);
+    }
+    
+    @keyframes notificationBounce {
+        0% { transform: translateY(-100px); }
+        60% { transform: translateY(10px); }
+        80% { transform: translateY(-5px); }
+        100% { transform: translateY(0); }
+    }
 }

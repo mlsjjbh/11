@@ -625,9 +625,14 @@
 <div id="desktopFloatingLyrics" class="desktop-floating-lyrics">
     <div class="desktop-floating-lyrics__header">
         <span class="desktop-floating-lyrics__title">歌词</span>
-        <button id="desktopFloatingLyricsClose" class="desktop-floating-lyrics__close" type="button">
-            <i class="fas fa-times"></i>
-        </button>
+        <div style="display: flex; gap: 8px;">
+            <button id="desktopBackgroundLyricsToggle" class="desktop-floating-lyrics__close" type="button" title="后台显示歌词">
+                <i class="fas fa-bell"></i>
+            </button>
+            <button id="desktopFloatingLyricsClose" class="desktop-floating-lyrics__close" type="button">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
     </div>
     <div id="desktopFloatingLyricsContent" class="desktop-floating-lyrics__content"></div>
 </div>
