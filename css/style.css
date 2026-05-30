@@ -1828,13 +1828,25 @@ html.mobile-view .favorites .favorite-item-action--remove {
 .controls {
     grid-area: controls;
     display: grid;
-    grid-template-columns: 300px minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas: "transport progress trailing";
+    grid-template-columns: 300px auto minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "transport visualizer progress trailing";
     align-items: center;
-    column-gap: 20px;
+    column-gap: 15px;
     row-gap: 12px;
     width: 100%;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transport-controls {
+    grid-area: transport;
+}
+
+.audio-visualizer {
+    grid-area: visualizer;
+}
+
+.progress-container {
+    grid-area: progress;
 }
 .controls button {
     background: var(--primary-color);
@@ -2457,19 +2469,60 @@ body.mobile-view body.is-playing .album-cover {
     border-radius: 50%;
 }
 
-/* 手机端性能优化 - 减少动画 */
+/* 手机端性能优化 - 只禁用不必要的动画，保留关键动画 */
 @media (max-width: 768px) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+    .playlist-item,
+    .search-result-item,
+    .notification {
+        transition: none !important;
     }
-    
-    .album-cover img {
-        animation: none !important;
-    }
-    
-    body.is-playing .album-cover img {
+}
+
+/* 音频可视化条 - 桌面端 */
+.audio-visualizer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    height: 40px;
+    padding: 8px 0;
+}
+
+.audio-visualizer__bar {
+    width: 4px;
+    background: linear-gradient(to top, var(--primary-color), var(--primary-color-dark));
+    border-radius: 2px;
+    transition: height 0.1s ease;
+}
+
+body.is-playing .audio-visualizer__bar {
+    animation: audioBar 0.5s ease-in-out infinite alternate;
+}
+
+body.is-playing .audio-visualizer__bar:nth-child(1) { animation-delay: 0s; }
+body.is-playing .audio-visualizer__bar:nth-child(2) { animation-delay: 0.1s; }
+body.is-playing .audio-visualizer__bar:nth-child(3) { animation-delay: 0.2s; }
+body.is-playing .audio-visualizer__bar:nth-child(4) { animation-delay: 0.1s; }
+body.is-playing .audio-visualizer__bar:nth-child(5) { animation-delay: 0s; }
+
+@keyframes audioBar {
+    0% { height: 8px; }
+    100% { height: 32px; }
+}
+
+/* 音频可视化条 - 移动端 */
+body.mobile-view .audio-visualizer {
+    height: 30px;
+    gap: 2px;
+}
+
+body.mobile-view .audio-visualizer__bar {
+    width: 3px;
+}
+
+/* 手机端禁用音频条动画，使用 JS 控制 */
+@media (max-width: 768px) {
+    body.is-playing .audio-visualizer__bar {
         animation: none !important;
     }
 }

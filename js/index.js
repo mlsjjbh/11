@@ -93,9 +93,85 @@ const dom = {
     favoritesOnlineImportStatus: document.getElementById("favoritesOnlineImportStatus"),
     mobileOnlineImportPlaylistBtn: document.getElementById("mobileOnlineImportPlaylistBtn"),
     mobileOnlineImportFavoritesBtn: document.getElementById("mobileOnlineImportFavoritesBtn"),
+    audioVisualizer: document.getElementById("audioVisualizer"),
+    audioVisualizerBars: document.querySelectorAll(".audio-visualizer__bar"),
 };
 
 window.SolaraDom = dom;
+
+// ==== 音频可视化器 ====
+const audioVisualizer = {
+    audioContext: null,
+    analyser: null,
+    dataArray: null,
+    source: null,
+    isInitialized: false,
+    animationId: null,
+
+    init() {
+        if (this.isInitialized || !dom.audioPlayer) return;
+
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.analyser = this.audioContext.createAnalyser();
+            this.analyser.fftSize = 64;
+            
+            const bufferLength = this.analyser.frequencyBinCount;
+            this.dataArray = new Uint8Array(bufferLength);
+
+            this.source = this.audioContext.createMediaElementSource(dom.audioPlayer);
+            this.source.connect(this.analyser);
+            this.analyser.connect(this.audioContext.destination);
+
+            this.isInitialized = true;
+        } catch (error) {
+            console.log('音频可视化初始化失败:', error);
+        }
+    },
+
+    start() {
+        if (!this.isInitialized) {
+            this.init();
+        }
+        
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+
+        this.animate();
+    },
+
+    stop() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+        
+        // 重置所有条的高度
+        dom.audioVisualizerBars.forEach(bar => {
+            bar.style.height = '8px';
+        });
+    },
+
+    animate() {
+        if (!this.analyser) return;
+
+        this.analyser.getByteFrequencyData(this.dataArray);
+
+        const bars = dom.audioVisualizerBars;
+        const step = Math.floor(this.dataArray.length / bars.length);
+
+        bars.forEach((bar, index) => {
+            const value = this.dataArray[index * step];
+            const height = Math.max(8, (value / 255) * 32);
+            bar.style.height = `${height}px`;
+        });
+
+        this.animationId = requestAnimationFrame(() => this.animate());
+    }
+};
+
+window.audioVisualizer = audioVisualizer;
 
 // ==== GSAP 动画管理器 ====
 const animeAnimations = {
@@ -2625,12 +2701,21 @@ function updatePlayPauseButton() {
         document.body.classList.toggle("is-playing", isPlaying);
     }
 
-    // 使用 Anime.js 控制专辑封面旋转
+    // 使用 GSAP 控制专辑封面旋转
     if (typeof animeAnimations !== 'undefined') {
         if (isPlaying) {
             animeAnimations.startAlbumRotation();
         } else {
             animeAnimations.pauseAlbumRotation();
+        }
+    }
+
+    // 控制音频可视化器
+    if (typeof audioVisualizer !== 'undefined') {
+        if (isPlaying) {
+            audioVisualizer.start();
+        } else {
+            audioVisualizer.stop();
         }
     }
 }
