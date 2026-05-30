@@ -1737,6 +1737,14 @@ html.mobile-view .favorites .favorite-item-action--remove {
     flex-direction: column;
     align-items: stretch;
     justify-content: center;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .lyrics {
+    background: linear-gradient(135deg, rgba(40, 40, 40, 0.5), rgba(30, 30, 30, 0.3));
 }
 
 .lyrics-scroll {
@@ -1751,6 +1759,17 @@ html.mobile-view .favorites .favorite-item-action--remove {
     padding-right: 8px;
     margin-right: -8px;
     overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) transparent;
+}
+
+.lyrics-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+
+.lyrics-scroll::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 2px;
 }
 
 /* 当歌词容器有内容时的样式 */
@@ -1765,11 +1784,18 @@ html.mobile-view .favorites .favorite-item-action--remove {
 
 .lyrics-content > div {
     white-space: pre-wrap;
-    padding: 5px;
-    margin-bottom: 5px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
     word-wrap: break-word;
     overflow-wrap: break-word;
     max-width: 100%;
+    border-radius: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-secondary-color);
+}
+
+.lyrics-content > div:hover {
+    background: rgba(26, 188, 156, 0.05);
 }
 
 /* 当歌词容器只有默认文本时的样式 */
@@ -1788,12 +1814,14 @@ html.mobile-view .favorites .favorite-item-action--remove {
 .lyrics.empty[data-placeholder="message"] .lyrics-scroll::before {
     content: none;
 }
+
 .lyrics .current { 
-    color: var(--lyrics-highlight-text); 
+    color: var(--primary-color); 
     font-weight: 700; 
-    background-color: var(--lyrics-highlight-bg); 
+    background: linear-gradient(135deg, rgba(26, 188, 156, 0.15), rgba(26, 188, 156, 0.08)); 
     transform: scale(1.05); 
-    box-shadow: 0 4px 15px var(--lyrics-highlight-shadow); 
+    box-shadow: 0 4px 20px rgba(26, 188, 156, 0.2);
+    border-radius: 12px;
 }
 
 /* 控制区域 */
@@ -2583,7 +2611,7 @@ body.mobile-view body.is-playing .album-cover img {
     transform: translateX(-50%);
     width: 88%;
     max-width: 380px;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(20, 20, 20, 0.85));
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.92), rgba(20, 20, 20, 0.88));
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border-radius: 28px;
@@ -2593,17 +2621,88 @@ body.mobile-view body.is-playing .album-cover img {
         0 0 0 1px rgba(255, 255, 255, 0.1),
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
     border: none;
-    z-index: 1000;
+    z-index: 50;
     display: none;
     text-align: center;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: move;
     user-select: none;
+    max-height: 60px;
+    overflow: hidden;
+}
+
+.mobile-floating-lyrics.expanded {
+    max-height: 300px;
+    border-radius: 20px;
+    padding: 0;
 }
 
 .mobile-floating-lyrics.show {
     display: block;
     animation: mobileSlideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-floating-lyrics__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    cursor: move;
+}
+
+.mobile-floating-lyrics__expand-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+}
+
+.mobile-floating-lyrics__expand-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.mobile-floating-lyrics__expand-btn i {
+    transition: transform 0.3s ease;
+}
+
+.mobile-floating-lyrics.expanded .mobile-floating-lyrics__expand-btn i {
+    transform: rotate(180deg);
+}
+
+.mobile-floating-lyrics__content {
+    padding: 0 16px 16px;
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.mobile-floating-lyrics__content::-webkit-scrollbar {
+    display: none;
+}
+
+.mobile-floating-lyrics__lyric-line {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.4);
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    margin-bottom: 4px;
+}
+
+.mobile-floating-lyrics__lyric-line.current {
+    color: #ffffff;
+    background: linear-gradient(135deg, rgba(26, 188, 156, 0.3), rgba(26, 188, 156, 0.15));
+    font-weight: 600;
+    font-size: 14px;
+    transform: scale(1.02);
 }
 
 @keyframes mobileSlideUp {

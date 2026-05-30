@@ -804,8 +804,9 @@ body.mobile-view .search-area {
     inset: 0;
     width: 100%;
     height: 100%;
-    background: rgba(6, 9, 14, 0.95);
-    backdrop-filter: blur(26px);
+    background: rgba(6, 9, 14, 0.98);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
     transform: translateY(-100%);
     transition: transform 0.45s cubic-bezier(0.33, 1, 0.68, 1);
     z-index: 160;

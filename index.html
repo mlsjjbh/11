@@ -639,7 +639,13 @@
 
 <!-- 移动端悬浮歌词条 -->
 <div id="mobileFloatingLyrics" class="mobile-floating-lyrics">
-    <div id="mobileFloatingLyricsText" class="mobile-floating-lyrics__text">暂无歌词</div>
+    <div class="mobile-floating-lyrics__header">
+        <div id="mobileFloatingLyricsText" class="mobile-floating-lyrics__text">暂无歌词</div>
+        <button id="mobileFloatingLyricsExpand" class="mobile-floating-lyrics__expand-btn" type="button">
+            <i class="fas fa-chevron-up"></i>
+        </button>
+    </div>
+    <div id="mobileFloatingLyricsContent" class="mobile-floating-lyrics__content"></div>
     <div id="mobileFloatingLyricsSongInfo" class="mobile-floating-lyrics__song-info"></div>
 </div>
 

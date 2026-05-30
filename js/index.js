@@ -6503,7 +6503,10 @@ const floatingLyrics = {
     desktopContent: null,
     mobileWidget: null,
     mobileText: null,
+    mobileContent: null,
     mobileSongInfo: null,
+    mobileExpandBtn: null,
+    isMobileExpanded: false,
     initialized: false,
     notificationPermission: false,
     backgroundNotification: null,
@@ -6517,11 +6520,21 @@ const floatingLyrics = {
         this.desktopContent = document.getElementById("desktopFloatingLyricsContent");
         this.mobileWidget = document.getElementById("mobileFloatingLyrics");
         this.mobileText = document.getElementById("mobileFloatingLyricsText");
+        this.mobileContent = document.getElementById("mobileFloatingLyricsContent");
         this.mobileSongInfo = document.getElementById("mobileFloatingLyricsSongInfo");
+        this.mobileExpandBtn = document.getElementById("mobileFloatingLyricsExpand");
 
         const desktopCloseBtn = document.getElementById("desktopFloatingLyricsClose");
         if (desktopCloseBtn) {
             desktopCloseBtn.addEventListener("click", () => this.hideDesktop());
+        }
+
+        // 移动端展开/折叠按钮
+        if (this.mobileExpandBtn) {
+            this.mobileExpandBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                this.toggleMobileExpand();
+            });
         }
 
         // 后台显示歌词按钮
@@ -6545,6 +6558,22 @@ const floatingLyrics = {
         this.requestNotificationPermission();
 
         this.syncLyrics();
+    },
+
+    // 切换移动端展开/折叠状态
+    toggleMobileExpand() {
+        if (!this.mobileWidget) return;
+        
+        this.isMobileExpanded = !this.isMobileExpanded;
+        this.mobileWidget.classList.toggle("expanded", this.isMobileExpanded);
+        
+        if (this.isMobileExpanded) {
+            // 展开时滚动到当前歌词
+            const currentLine = this.mobileContent?.querySelector(".current");
+            if (currentLine) {
+                currentLine.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        }
     },
 
     // 请求浏览器通知权限（用于后台显示歌词）
@@ -6630,8 +6659,9 @@ const floatingLyrics = {
         };
 
         const onStart = (e) => {
-            // 如果点击的是关闭按钮，不触发拖拽
-            if (e.target.closest('.desktop-floating-lyrics__close')) {
+            // 如果点击的是关闭按钮或展开按钮，不触发拖拽
+            if (e.target.closest('.desktop-floating-lyrics__close') || 
+                e.target.closest('.mobile-floating-lyrics__expand-btn')) {
                 return;
             }
 
@@ -6753,6 +6783,23 @@ const floatingLyrics = {
             this.mobileText.textContent = currentLyricText || "暂无歌词";
         }
 
+        // 更新移动端展开内容
+        if (this.mobileContent && Array.isArray(lyricsData)) {
+            const mobileHtml = lyricsData.map((lyric, index) => {
+                const isCurrent = index === currentIndex;
+                return `<div class="mobile-floating-lyrics__lyric-line${isCurrent ? ' current' : ''}">${lyric.text || '...'}</div>`;
+            }).join("");
+            this.mobileContent.innerHTML = mobileHtml;
+
+            // 展开时滚动到当前歌词
+            if (this.isMobileExpanded) {
+                const currentLine = this.mobileContent.querySelector(".current");
+                if (currentLine) {
+                    currentLine.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+            }
+        }
+
         // 更新后台通知
         const song = state.currentSong;
         if (song && currentLyricText) {
@@ -6823,6 +6870,9 @@ if (typeof originalClearLyricsContent === "function") {
         originalClearLyricsContent();
         if (floatingLyrics.mobileText) {
             floatingLyrics.mobileText.textContent = "暂无歌词";
+        }
+        if (floatingLyrics.mobileContent) {
+            floatingLyrics.mobileContent.innerHTML = "";
         }
         if (floatingLyrics.desktopContent) {
             floatingLyrics.desktopContent.innerHTML = "";
