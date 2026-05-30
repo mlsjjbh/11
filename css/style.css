@@ -1827,39 +1827,26 @@ html.mobile-view .favorites .favorite-item-action--remove {
 /* 控制区域 */
 .controls {
     grid-area: controls;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: 300px auto minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "transport visualizer progress trailing";
+    align-items: center;
+    column-gap: 15px;
+    row-gap: 12px;
     width: 100%;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.controls-row {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    width: 100%;
+.transport-controls {
+    grid-area: transport;
 }
 
-.transport-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
+.audio-visualizer {
+    grid-area: visualizer;
 }
 
 .progress-container {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.control-trailing {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    flex-shrink: 0;
+    grid-area: progress;
 }
 .controls button {
     background: var(--primary-color);
@@ -2491,42 +2478,53 @@ body.mobile-view body.is-playing .album-cover {
     }
 }
 
-/* 音频可视化条 */
+/* 音频可视化条 - 桌面端 */
 .audio-visualizer {
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    gap: 4px;
-    height: 36px;
-    padding: 4px 0;
+    gap: 3px;
+    height: 40px;
+    padding: 8px 0;
 }
 
 .audio-visualizer__bar {
     width: 4px;
-    min-height: 6px;
     background: linear-gradient(to top, var(--primary-color), var(--primary-color-dark));
     border-radius: 2px;
-    transition: height 0.08s ease-out;
+    transition: height 0.1s ease;
 }
 
-body.is-playing .audio-visualizer__bar:nth-child(1) { animation: audioBar1 0.45s ease-in-out infinite alternate; }
-body.is-playing .audio-visualizer__bar:nth-child(2) { animation: audioBar2 0.55s ease-in-out infinite alternate; }
-body.is-playing .audio-visualizer__bar:nth-child(3) { animation: audioBar3 0.4s ease-in-out infinite alternate; }
-body.is-playing .audio-visualizer__bar:nth-child(4) { animation: audioBar2 0.5s ease-in-out infinite alternate; }
-body.is-playing .audio-visualizer__bar:nth-child(5) { animation: audioBar1 0.48s ease-in-out infinite alternate; }
+body.is-playing .audio-visualizer__bar {
+    animation: audioBar 0.5s ease-in-out infinite alternate;
+}
 
-@keyframes audioBar1 { 0% { height: 8px; } 100% { height: 28px; } }
-@keyframes audioBar2 { 0% { height: 10px; } 100% { height: 32px; } }
-@keyframes audioBar3 { 0% { height: 6px; } 100% { height: 24px; } }
+body.is-playing .audio-visualizer__bar:nth-child(1) { animation-delay: 0s; }
+body.is-playing .audio-visualizer__bar:nth-child(2) { animation-delay: 0.1s; }
+body.is-playing .audio-visualizer__bar:nth-child(3) { animation-delay: 0.2s; }
+body.is-playing .audio-visualizer__bar:nth-child(4) { animation-delay: 0.1s; }
+body.is-playing .audio-visualizer__bar:nth-child(5) { animation-delay: 0s; }
 
-/* 手机端音频条样式 */
+@keyframes audioBar {
+    0% { height: 8px; }
+    100% { height: 32px; }
+}
+
+/* 音频可视化条 - 移动端 */
 body.mobile-view .audio-visualizer {
-    height: 28px;
-    gap: 3px;
+    height: 30px;
+    gap: 2px;
 }
 
 body.mobile-view .audio-visualizer__bar {
     width: 3px;
+}
+
+/* 手机端禁用音频条动画，使用 JS 控制 */
+@media (max-width: 768px) {
+    body.is-playing .audio-visualizer__bar {
+        animation: none !important;
+    }
 }
 
 /* 悬浮歌词小组件 - 桌面端 */
@@ -2547,6 +2545,7 @@ body.mobile-view .audio-visualizer__bar {
     border: none;
     z-index: 1000;
     display: none;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: move;
     user-select: none;
 }
@@ -2663,26 +2662,28 @@ body.mobile-view .audio-visualizer__bar {
 .mobile-floating-lyrics {
     position: fixed;
     bottom: 100px;
-    left: 6%;
+    left: 50%;
+    transform: translateX(-50%);
     width: 88%;
     max-width: 380px;
-    background: rgba(10, 10, 15, 0.92);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.92), rgba(20, 20, 20, 0.88));
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border-radius: 28px;
     padding: 14px 24px;
     box-shadow: 
-        0 12px 40px rgba(0, 0, 0, 0.5),
-        0 0 0 1px rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+        0 12px 40px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border: none;
     z-index: 50;
     display: none;
     text-align: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: move;
     user-select: none;
     max-height: 60px;
     overflow: hidden;
-    opacity: 1;
 }
 
 .mobile-floating-lyrics.expanded {

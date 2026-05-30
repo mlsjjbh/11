@@ -99,65 +99,75 @@ const dom = {
 
 window.SolaraDom = dom;
 
-// ==== 音频可视化器（模拟模式，不使用 Web Audio API） ====
+// ==== 音频可视化器 ====
 const audioVisualizer = {
+    audioContext: null,
+    analyser: null,
+    dataArray: null,
+    source: null,
+    isInitialized: false,
     animationId: null,
-    isPlaying: false,
-    bars: [],
-    targetHeights: [],
-    currentHeights: [],
 
     init() {
-        this.bars = Array.from(dom.audioVisualizerBars || []);
-        this.targetHeights = this.bars.map(() => 8);
-        this.currentHeights = this.bars.map(() => 8);
+        if (this.isInitialized || !dom.audioPlayer) return;
+
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.analyser = this.audioContext.createAnalyser();
+            this.analyser.fftSize = 64;
+            
+            const bufferLength = this.analyser.frequencyBinCount;
+            this.dataArray = new Uint8Array(bufferLength);
+
+            this.source = this.audioContext.createMediaElementSource(dom.audioPlayer);
+            this.source.connect(this.analyser);
+            this.analyser.connect(this.audioContext.destination);
+
+            this.isInitialized = true;
+        } catch (error) {
+            console.log('音频可视化初始化失败:', error);
+        }
     },
 
     start() {
-        if (this.isPlaying) return;
-        this.isPlaying = true;
-        this.init();
+        if (!this.isInitialized) {
+            this.init();
+        }
+        
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+
         this.animate();
     },
 
     stop() {
-        this.isPlaying = false;
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
         }
-        // 平滑降下来
-        this.bars.forEach((bar, i) => {
-            this.targetHeights[i] = 8;
+        
+        // 重置所有条的高度
+        dom.audioVisualizerBars.forEach(bar => {
+            bar.style.height = '8px';
         });
-        this.smoothAnimate();
     },
 
     animate() {
-        if (!this.isPlaying) return;
+        if (!this.analyser) return;
 
-        // 生成随机目标高度模拟音频跳动
-        this.bars.forEach((bar, i) => {
-            const base = 12;
-            const random = Math.random() * 24;
-            // 中间的条更高一些
-            const center = Math.abs(i - Math.floor(this.bars.length / 2));
-            const centerBonus = (this.bars.length / 2 - center) * 4;
-            this.targetHeights[i] = Math.min(36, base + random + centerBonus);
+        this.analyser.getByteFrequencyData(this.dataArray);
+
+        const bars = dom.audioVisualizerBars;
+        const step = Math.floor(this.dataArray.length / bars.length);
+
+        bars.forEach((bar, index) => {
+            const value = this.dataArray[index * step];
+            const height = Math.max(8, (value / 255) * 32);
+            bar.style.height = `${height}px`;
         });
 
-        this.smoothAnimate();
         this.animationId = requestAnimationFrame(() => this.animate());
-    },
-
-    smoothAnimate() {
-        this.bars.forEach((bar, i) => {
-            const target = this.targetHeights[i] || 8;
-            const current = this.currentHeights[i] || 8;
-            // 平滑插值
-            this.currentHeights[i] = current + (target - current) * 0.3;
-            bar.style.height = `${this.currentHeights[i]}px`;
-        });
     }
 };
 
@@ -228,7 +238,6 @@ const animeAnimations = {
         notification.className = `notification ${type}`;
 
         gsap.killTweensOf(notification);
-        gsap.set(notification, { clearProps: 'all' });
         notification.classList.add('show');
 
         const tl = gsap.timeline();
@@ -240,10 +249,7 @@ const animeAnimations = {
             { x: 400, scale: 0.8, opacity: 0, duration: this.getDuration(0.4), ease: 'power2.in' },
             '+=2.5'
         );
-        tl.call(() => {
-            notification.classList.remove('show');
-            gsap.set(notification, { clearProps: 'all' });
-        });
+        tl.call(() => notification.classList.remove('show'));
     },
 
     // 悬浮歌词出现动画
@@ -256,17 +262,12 @@ const animeAnimations = {
         }
 
         gsap.killTweensOf(element);
-        gsap.set(element, { clearProps: 'all' });
+        element.style.opacity = '0';
         element.classList.add('show');
 
         gsap.fromTo(element,
-            { opacity: 0, scale: 0.9 },
-            { 
-                opacity: 1, scale: 1, 
-                duration: this.getDuration(0.35), 
-                ease: 'back.out(1.4)',
-                clearProps: 'transform,opacity'
-            }
+            { y: 30, scale: 0.9, opacity: 0 },
+            { y: 0, scale: 1, opacity: 1, duration: this.getDuration(0.4), ease: 'back.out(1.7)' }
         );
     },
 
@@ -281,13 +282,10 @@ const animeAnimations = {
 
         gsap.killTweensOf(element);
         gsap.to(element, {
-            opacity: 0, scale: 0.9,
-            duration: this.getDuration(0.25),
+            y: 30, scale: 0.9, opacity: 0,
+            duration: this.getDuration(0.3),
             ease: 'power2.in',
-            onComplete: () => {
-                element.classList.remove('show');
-                gsap.set(element, { clearProps: 'all' });
-            }
+            onComplete: () => element.classList.remove('show')
         });
     },
 
