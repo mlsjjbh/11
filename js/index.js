@@ -202,31 +202,92 @@ const animeAnimations = {
         this.albumAnimations.forEach(anim => anim.pause());
     },
 
-    // 通知动画（纯 CSS，不用 GSAP）
+    // 通知动画
     showNotification(message, type = 'success') {
         const notification = dom.notification;
         if (!notification) return;
 
         notification.textContent = message;
         notification.className = `notification ${type}`;
+
+        // 手机端用纯 CSS
+        if (this.isMobile) {
+            notification.classList.add('show');
+            clearTimeout(this._notificationTimer);
+            this._notificationTimer = setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+            return;
+        }
+
+        // 桌面端用 GSAP
+        if (!this.shouldAnimate()) {
+            notification.classList.add('show');
+            setTimeout(() => notification.classList.remove('show'), 3000);
+            return;
+        }
+
+        gsap.killTweensOf(notification);
         notification.classList.add('show');
 
-        clearTimeout(this._notificationTimer);
-        this._notificationTimer = setTimeout(() => {
-            notification.classList.remove('show');
-        }, 3000);
+        const tl = gsap.timeline();
+        tl.fromTo(notification, 
+            { x: 400, scale: 0.8, opacity: 0 },
+            { x: 0, scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.7)' }
+        );
+        tl.to(notification, 
+            { x: 400, scale: 0.8, opacity: 0, duration: 0.4, ease: 'power2.in' },
+            '+=2.5'
+        );
+        tl.call(() => notification.classList.remove('show'));
     },
 
-    // 悬浮歌词出现动画（纯 CSS，不用 GSAP）
+    // 悬浮歌词出现动画
     showFloatingLyrics(element) {
         if (!element) return;
+
+        // 手机端用纯 CSS，桌面端用 GSAP
+        if (this.isMobile) {
+            element.classList.add('show');
+            return;
+        }
+
+        if (!this.shouldAnimate()) {
+            element.classList.add('show');
+            return;
+        }
+
+        gsap.killTweensOf(element);
         element.classList.add('show');
+
+        gsap.fromTo(element,
+            { y: 30, scale: 0.9, opacity: 0 },
+            { y: 0, scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(1.7)' }
+        );
     },
 
-    // 悬浮歌词隐藏动画（纯 CSS，不用 GSAP）
+    // 悬浮歌词隐藏动画
     hideFloatingLyrics(element) {
         if (!element) return;
-        element.classList.remove('show');
+
+        // 手机端用纯 CSS
+        if (this.isMobile) {
+            element.classList.remove('show');
+            return;
+        }
+
+        if (!this.shouldAnimate()) {
+            element.classList.remove('show');
+            return;
+        }
+
+        gsap.killTweensOf(element);
+        gsap.to(element, {
+            y: 30, scale: 0.9, opacity: 0,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: () => element.classList.remove('show')
+        });
     },
 
     // 按钮点击反馈动画

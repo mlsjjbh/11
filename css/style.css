@@ -2547,9 +2547,6 @@ body.mobile-view .audio-visualizer__bar {
     display: none;
     cursor: move;
     user-select: none;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .dark-mode .desktop-floating-lyrics {
@@ -2562,8 +2559,6 @@ body.mobile-view .audio-visualizer__bar {
 
 .desktop-floating-lyrics.show {
     display: block;
-    opacity: 1;
-    transform: translateY(0);
 }
 
 @keyframes floatIn {
