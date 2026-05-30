@@ -166,7 +166,7 @@ const animeAnimations = {
 
     // 获取动画时长（手机端缩短）
     getDuration(ms) {
-        return this.isMobile ? Math.max(ms * 0.8, 150) : ms;
+        return this.isMobile ? Math.max(ms * 0.35, 120) : ms;
     },
 
     // 初始化专辑封面旋转动画
