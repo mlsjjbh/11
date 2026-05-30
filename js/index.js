@@ -97,6 +97,196 @@ const dom = {
 
 window.SolaraDom = dom;
 
+// ==== Anime.js 动画管理器 ====
+const animeAnimations = {
+    albumRotate: null,
+    notificationTimeline: null,
+    floatingLyricsTimeline: null,
+    isAlbumRotating: false,
+
+    // 初始化专辑封面旋转动画
+    initAlbumRotation() {
+        const albumCover = document.querySelector('.album-cover img');
+        const mobileAlbumCover = document.querySelector('.mobile-turntable__platter .album-cover img');
+        
+        const createRotation = (element) => {
+            if (!element || typeof anime === 'undefined') return null;
+            
+            return anime({
+                targets: element,
+                rotate: '1turn',
+                duration: 20000,
+                easing: 'linear',
+                loop: true,
+                autoplay: false
+            });
+        };
+
+        this.albumCoverElements = [albumCover, mobileAlbumCover].filter(Boolean);
+        this.albumAnimations = this.albumCoverElements.map(el => createRotation(el));
+    },
+
+    // 开始专辑旋转
+    startAlbumRotation() {
+        if (this.isAlbumRotating) return;
+        this.isAlbumRotating = true;
+        
+        this.albumAnimations.forEach(anim => {
+            if (anim) anim.play();
+        });
+    },
+
+    // 暂停专辑旋转
+    pauseAlbumRotation() {
+        this.isAlbumRotating = false;
+        
+        this.albumAnimations.forEach(anim => {
+            if (anim) anim.pause();
+        });
+    },
+
+    // 通知动画
+    showNotification(message, type = 'success') {
+        const notification = dom.notification;
+        if (!notification || typeof anime === 'undefined') {
+            // 回退到原始方法
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            setTimeout(() => notification.classList.remove('show'), 3000);
+            return;
+        }
+
+        notification.textContent = message;
+        notification.className = `notification ${type}`;
+
+        if (this.notificationTimeline) {
+            this.notificationTimeline.kill();
+        }
+
+        this.notificationTimeline = anime.timeline({
+            easing: 'easeOutExpo'
+        });
+
+        this.notificationTimeline
+            .add({
+                targets: notification,
+                translateX: [400, 0],
+                scale: [0.8, 1],
+                opacity: [0, 1],
+                duration: 600,
+                begin: () => {
+                    notification.classList.add('show');
+                }
+            })
+            .add({
+                targets: notification,
+                translateX: [0, 400],
+                scale: [1, 0.8],
+                opacity: [1, 0],
+                duration: 500,
+                delay: 2500,
+                complete: () => {
+                    notification.classList.remove('show');
+                }
+            });
+    },
+
+    // 悬浮歌词出现动画
+    showFloatingLyrics(element) {
+        if (!element || typeof anime === 'undefined') {
+            element?.classList.add('show');
+            return;
+        }
+
+        anime({
+            targets: element,
+            translateY: [30, 0],
+            scale: [0.9, 1],
+            opacity: [0, 1],
+            duration: 400,
+            easing: 'easeOutBack',
+            begin: () => {
+                element.classList.add('show');
+            }
+        });
+    },
+
+    // 悬浮歌词隐藏动画
+    hideFloatingLyrics(element) {
+        if (!element || typeof anime === 'undefined') {
+            element?.classList.remove('show');
+            return;
+        }
+
+        anime({
+            targets: element,
+            translateY: [0, 30],
+            scale: [1, 0.9],
+            opacity: [1, 0],
+            duration: 300,
+            easing: 'easeInBack',
+            complete: () => {
+                element.classList.remove('show');
+            }
+        });
+    },
+
+    // 歌词高亮动画
+    highlightLyric(element) {
+        if (!element || typeof anime === 'undefined') return;
+
+        anime({
+            targets: element,
+            scale: [1, 1.05, 1],
+            duration: 400,
+            easing: 'easeOutQuad'
+        });
+    },
+
+    // 按钮点击反馈动画
+    buttonPulse(element) {
+        if (!element || typeof anime === 'undefined') return;
+
+        anime({
+            targets: element,
+            scale: [1, 0.9, 1.1, 1],
+            duration: 300,
+            easing: 'easeOutQuad'
+        });
+    },
+
+    // 搜索结果出现动画
+    showSearchResults(items) {
+        if (!items || items.length === 0 || typeof anime === 'undefined') return;
+
+        anime({
+            targets: items,
+            translateY: [20, 0],
+            opacity: [0, 1],
+            delay: anime.stagger(50),
+            duration: 400,
+            easing: 'easeOutQuad'
+        });
+    },
+
+    // 播放列表项动画
+    animatePlaylistItems(items) {
+        if (!items || items.length === 0 || typeof anime === 'undefined') return;
+
+        anime({
+            targets: items,
+            translateX: [-20, 0],
+            opacity: [0, 1],
+            delay: anime.stagger(30),
+            duration: 350,
+            easing: 'easeOutCubic'
+        });
+    }
+};
+
+window.animeAnimations = animeAnimations;
+
 const isMobileView = Boolean(window.__SOLARA_IS_MOBILE);
 
 const mobileBridge = window.SolaraMobileBridge || {};
@@ -2464,6 +2654,15 @@ function updatePlayPauseButton() {
     dom.playPauseBtn.title = isPlaying ? "暂停" : "播放";
     if (document.body) {
         document.body.classList.toggle("is-playing", isPlaying);
+    }
+
+    // 使用 Anime.js 控制专辑封面旋转
+    if (typeof animeAnimations !== 'undefined') {
+        if (isPlaying) {
+            animeAnimations.startAlbumRotation();
+        } else {
+            animeAnimations.pauseAlbumRotation();
+        }
     }
 }
 
@@ -6487,6 +6686,13 @@ function switchMobileView(view) {
 
 // 修复：显示通知
 function showNotification(message, type = "success") {
+    // 使用 Anime.js 动画
+    if (typeof animeAnimations !== 'undefined') {
+        animeAnimations.showNotification(message, type);
+        return;
+    }
+
+    // 回退到原始方法
     const notification = dom.notification;
     notification.textContent = message;
     notification.className = `notification ${type}`;
@@ -6724,37 +6930,65 @@ const floatingLyrics = {
 
     showDesktop() {
         if (this.desktopWidget) {
-            this.desktopWidget.classList.add("show");
+            // 使用 Anime.js 动画
+            if (typeof animeAnimations !== 'undefined') {
+                animeAnimations.showFloatingLyrics(this.desktopWidget);
+            } else {
+                this.desktopWidget.classList.add("show");
+            }
         }
     },
 
     hideDesktop() {
         if (this.desktopWidget) {
-            this.desktopWidget.classList.remove("show");
+            // 使用 Anime.js 动画
+            if (typeof animeAnimations !== 'undefined') {
+                animeAnimations.hideFloatingLyrics(this.desktopWidget);
+            } else {
+                this.desktopWidget.classList.remove("show");
+            }
         }
     },
 
     toggleDesktop() {
         if (this.desktopWidget) {
-            this.desktopWidget.classList.toggle("show");
+            if (this.desktopWidget.classList.contains("show")) {
+                this.hideDesktop();
+            } else {
+                this.showDesktop();
+            }
         }
     },
 
     showMobile() {
         if (this.mobileWidget) {
-            this.mobileWidget.classList.add("show");
+            // 使用 Anime.js 动画
+            if (typeof animeAnimations !== 'undefined') {
+                animeAnimations.showFloatingLyrics(this.mobileWidget);
+            } else {
+                this.mobileWidget.classList.add("show");
+            }
         }
     },
 
     hideMobile() {
         if (this.mobileWidget) {
-            this.mobileWidget.classList.remove("show");
+            // 使用 Anime.js 动画
+            if (typeof animeAnimations !== 'undefined') {
+                animeAnimations.hideFloatingLyrics(this.mobileWidget);
+            } else {
+                this.mobileWidget.classList.remove("show");
+            }
         }
     },
 
     toggleMobile() {
         if (this.mobileWidget) {
-            this.mobileWidget.classList.toggle("show");
+            if (this.mobileWidget.classList.contains("show")) {
+                this.hideMobile();
+            } else {
+                this.showMobile();
+            }
         }
     },
 
@@ -6835,9 +7069,15 @@ const floatingLyrics = {
     }
 };
 
-// 初始化悬浮歌词
+// 初始化悬浮歌词和 Anime.js 动画
 window.addEventListener("load", () => {
     floatingLyrics.init();
+    
+    // 初始化 Anime.js 动画
+    if (typeof animeAnimations !== 'undefined' && typeof anime !== 'undefined') {
+        animeAnimations.initAlbumRotation();
+        console.log('Anime.js 动画已初始化');
+    }
 });
 
 // 扩展现有的 syncLyrics 函数
