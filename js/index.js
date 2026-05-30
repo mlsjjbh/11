@@ -103,20 +103,22 @@ const animeAnimations = {
     notificationTimeline: null,
     floatingLyricsTimeline: null,
     isAlbumRotating: false,
+    albumAnimations: [],
 
     // 初始化专辑封面旋转动画
     initAlbumRotation() {
+        if (typeof anime === 'undefined' || !anime.animate) return;
+        
         const albumCover = document.querySelector('.album-cover img');
         const mobileAlbumCover = document.querySelector('.mobile-turntable__platter .album-cover img');
         
         const createRotation = (element) => {
-            if (!element || typeof anime === 'undefined') return null;
+            if (!element) return null;
             
-            return anime({
-                targets: element,
+            return anime.animate(element, {
                 rotate: '1turn',
                 duration: 20000,
-                easing: 'linear',
+                ease: 'linear',
                 loop: true,
                 autoplay: false
             });
@@ -132,7 +134,7 @@ const animeAnimations = {
         this.isAlbumRotating = true;
         
         this.albumAnimations.forEach(anim => {
-            if (anim) anim.play();
+            if (anim && anim.play) anim.play();
         });
     },
 
@@ -141,14 +143,14 @@ const animeAnimations = {
         this.isAlbumRotating = false;
         
         this.albumAnimations.forEach(anim => {
-            if (anim) anim.pause();
+            if (anim && anim.pause) anim.pause();
         });
     },
 
     // 通知动画
     showNotification(message, type = 'success') {
         const notification = dom.notification;
-        if (!notification || typeof anime === 'undefined') {
+        if (!notification || typeof anime === 'undefined' || !anime.animate) {
             // 回退到原始方法
             notification.textContent = message;
             notification.className = `notification ${type}`;
@@ -159,73 +161,68 @@ const animeAnimations = {
 
         notification.textContent = message;
         notification.className = `notification ${type}`;
+        notification.classList.add('show');
 
-        if (this.notificationTimeline) {
-            this.notificationTimeline.kill();
-        }
-
-        this.notificationTimeline = anime.timeline({
-            easing: 'easeOutExpo'
+        // 入场动画
+        anime.animate(notification, {
+            translateX: [400, 0],
+            scale: [0.8, 1],
+            opacity: [0, 1],
+            duration: 600,
+            ease: 'outExpo'
         });
 
-        this.notificationTimeline
-            .add({
-                targets: notification,
-                translateX: [400, 0],
-                scale: [0.8, 1],
-                opacity: [0, 1],
-                duration: 600,
-                begin: () => {
-                    notification.classList.add('show');
-                }
-            })
-            .add({
-                targets: notification,
+        // 延时退场
+        setTimeout(() => {
+            anime.animate(notification, {
                 translateX: [0, 400],
                 scale: [1, 0.8],
                 opacity: [1, 0],
                 duration: 500,
-                delay: 2500,
+                ease: 'inExpo',
                 complete: () => {
                     notification.classList.remove('show');
                 }
             });
+        }, 2800);
     },
 
     // 悬浮歌词出现动画
     showFloatingLyrics(element) {
-        if (!element || typeof anime === 'undefined') {
-            element?.classList.add('show');
+        if (!element) return;
+        
+        if (typeof anime === 'undefined' || !anime.animate) {
+            element.classList.add('show');
             return;
         }
 
-        anime({
-            targets: element,
+        element.style.opacity = '0';
+        element.classList.add('show');
+        
+        anime.animate(element, {
             translateY: [30, 0],
             scale: [0.9, 1],
             opacity: [0, 1],
             duration: 400,
-            easing: 'easeOutBack',
-            begin: () => {
-                element.classList.add('show');
-            }
+            ease: 'outBack'
         });
     },
 
     // 悬浮歌词隐藏动画
     hideFloatingLyrics(element) {
-        if (!element || typeof anime === 'undefined') {
-            element?.classList.remove('show');
+        if (!element) return;
+        
+        if (typeof anime === 'undefined' || !anime.animate) {
+            element.classList.remove('show');
             return;
         }
 
-        anime({
-            targets: element,
+        anime.animate(element, {
             translateY: [0, 30],
             scale: [1, 0.9],
             opacity: [1, 0],
             duration: 300,
-            easing: 'easeInBack',
+            ease: 'inBack',
             complete: () => {
                 element.classList.remove('show');
             }
@@ -234,53 +231,49 @@ const animeAnimations = {
 
     // 歌词高亮动画
     highlightLyric(element) {
-        if (!element || typeof anime === 'undefined') return;
+        if (!element || typeof anime === 'undefined' || !anime.animate) return;
 
-        anime({
-            targets: element,
+        anime.animate(element, {
             scale: [1, 1.05, 1],
             duration: 400,
-            easing: 'easeOutQuad'
+            ease: 'outQuad'
         });
     },
 
     // 按钮点击反馈动画
     buttonPulse(element) {
-        if (!element || typeof anime === 'undefined') return;
+        if (!element || typeof anime === 'undefined' || !anime.animate) return;
 
-        anime({
-            targets: element,
+        anime.animate(element, {
             scale: [1, 0.9, 1.1, 1],
             duration: 300,
-            easing: 'easeOutQuad'
+            ease: 'outQuad'
         });
     },
 
     // 搜索结果出现动画
     showSearchResults(items) {
-        if (!items || items.length === 0 || typeof anime === 'undefined') return;
+        if (!items || items.length === 0 || typeof anime === 'undefined' || !anime.animate) return;
 
-        anime({
-            targets: items,
+        anime.animate(items, {
             translateY: [20, 0],
             opacity: [0, 1],
-            delay: anime.stagger(50),
+            delay: anime.stagger ? anime.stagger(50) : 50,
             duration: 400,
-            easing: 'easeOutQuad'
+            ease: 'outQuad'
         });
     },
 
     // 播放列表项动画
     animatePlaylistItems(items) {
-        if (!items || items.length === 0 || typeof anime === 'undefined') return;
+        if (!items || items.length === 0 || typeof anime === 'undefined' || !anime.animate) return;
 
-        anime({
-            targets: items,
+        anime.animate(items, {
             translateX: [-20, 0],
             opacity: [0, 1],
-            delay: anime.stagger(30),
+            delay: anime.stagger ? anime.stagger(30) : 30,
             duration: 350,
-            easing: 'easeOutCubic'
+            ease: 'outCubic'
         });
     }
 };
