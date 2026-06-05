@@ -95,6 +95,19 @@ const dom = {
     mobileOnlineImportFavoritesBtn: document.getElementById("mobileOnlineImportFavoritesBtn"),
     audioVisualizer: document.getElementById("audioVisualizer"),
     audioVisualizerBars: document.querySelectorAll(".audio-visualizer__bar"),
+    // 共听模式元素
+    coListenPanel: document.getElementById("coListenPanel"),
+    coListenRankBtn: document.getElementById("coListenRankBtn"),
+    rankOverlay: document.getElementById("rankOverlay"),
+    rankModalClose: document.getElementById("rankModalClose"),
+    rankList: document.getElementById("rankList"),
+    rankTotalTime: document.getElementById("rankTotalTime"),
+    userName1: document.getElementById("userName1"),
+    userName2: document.getElementById("userName2"),
+    userTime1: document.getElementById("userTime1"),
+    userTime2: document.getElementById("userTime2"),
+    userCardCheckins: document.querySelectorAll(".user-card__checkin"),
+    userCards: document.querySelectorAll(".user-card"),
 };
 
 window.SolaraDom = dom;
@@ -1388,6 +1401,21 @@ const state = {
     currentGradient: '',
     isMobileInlineLyricsOpen: false,
     selectedSearchResults: new Set(),
+    // 共听模式
+    coListeners: (function() {
+        try {
+            const saved = JSON.parse(localStorage.getItem('coListenersData') || 'null');
+            if (saved && Array.isArray(saved) && saved.length === 2) {
+                return saved;
+            }
+        } catch(e) {}
+        return [
+            { name: '听友①', totalTime: 0, isActive: false, icon: 'user-astronaut' },
+            { name: '听友②', totalTime: 0, isActive: false, icon: 'user-ninja' }
+        ];
+    })(),
+    coListenTimer: null,
+    coListenLastTick: null,
 };
 
 let importSelectedMenuOutsideHandler = null;
@@ -4079,7 +4107,285 @@ function setupInteractions() {
         initializeMobileUI();
         updateMobileClearPlaylistVisibility();
     }
+
+    // ===== 共听模式初始化 =====
+    initCoListen();
 }
+
+// ===== 共听模式功能 =====
+
+function initCoListen() {
+    // 从 localStorage 恢复用户昵称
+    try {
+        const savedNames = JSON.parse(localStorage.getItem('coListenNames') || 'null');
+        if (savedNames && Array.isArray(savedNames) && savedNames.length === 2) {
+            state.coListeners[0].name = savedNames[0];
+            state.coListeners[1].name = savedNames[1];
+        }
+    } catch(e) {}
+
+    // 同步昵称到输入框
+    if (dom.userName1) dom.userName1.value = state.coListeners[0].name;
+    if (dom.userName2) dom.userName2.value = state.coListeners[1].name;
+
+    // 更新UI
+    updateCoListenUI();
+
+    // 绑定事件：签到/签退按钮
+    dom.userCardCheckins.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const userIndex = parseInt(this.dataset.user);
+            toggleCoListenUser(userIndex);
+        });
+    });
+
+    // 绑定事件：昵称修改
+    if (dom.userName1) {
+        dom.userName1.addEventListener('change', function() {
+            state.coListeners[0].name = this.value || '听友①';
+            saveCoListenData();
+        });
+    }
+    if (dom.userName2) {
+        dom.userName2.addEventListener('change', function() {
+            state.coListeners[1].name = this.value || '听友②';
+            saveCoListenData();
+        });
+    }
+
+    // 绑定事件：排行榜按钮
+    if (dom.coListenRankBtn) {
+        dom.coListenRankBtn.addEventListener('click', function() {
+            openRankModal();
+        });
+    }
+
+    // 绑定事件：排行榜关闭
+    if (dom.rankModalClose) {
+        dom.rankModalClose.addEventListener('click', closeRankModal);
+    }
+
+    // 点击排行榜遮罩关闭
+    if (dom.rankOverlay) {
+        dom.rankOverlay.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRankModal();
+            }
+        });
+    }
+
+    // 按 ESC 关闭排行榜
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeRankModal();
+        }
+    });
+
+    // 恢复计时器（如有激活用户）
+    const hasActive = state.coListeners.some(l => l.isActive);
+    if (hasActive) {
+        startCoListenTimer();
+    }
+
+    debugLog('共听模式初始化完成');
+}
+
+function toggleCoListenUser(userIndex) {
+    const listener = state.coListeners[userIndex];
+    const wasActive = listener.isActive;
+
+    if (wasActive) {
+        // 签退
+        listener.isActive = false;
+        showNotification(`${listener.name} 已停止计时`, 'info');
+    } else {
+        // 签到
+        listener.isActive = true;
+        showNotification(`${listener.name} 开始听歌计时！🎵`, 'success');
+    }
+
+    updateCoListenUI();
+    saveCoListenData();
+
+    // 管理计时器
+    const hasActive = state.coListeners.some(l => l.isActive);
+    if (hasActive) {
+        startCoListenTimer();
+    } else {
+        stopCoListenTimer();
+    }
+}
+
+function startCoListenTimer() {
+    if (state.coListenTimer) return;
+    state.coListenLastTick = Date.now();
+    state.coListenTimer = setInterval(tickCoListenTimer, 1000);
+}
+
+function stopCoListenTimer() {
+    if (state.coListenTimer) {
+        clearInterval(state.coListenTimer);
+        state.coListenTimer = null;
+    }
+    state.coListenLastTick = null;
+}
+
+function tickCoListenTimer() {
+    const now = Date.now();
+    const paused = dom.audioPlayer ? dom.audioPlayer.paused : true;
+
+    if (state.coListenLastTick && !paused) {
+        const elapsed = (now - state.coListenLastTick) / 1000;
+        let anyActive = false;
+
+        state.coListeners.forEach(listener => {
+            if (listener.isActive) {
+                listener.totalTime += elapsed;
+                anyActive = true;
+            }
+        });
+
+        if (anyActive) {
+            updateCoListenUI();
+            saveCoListenDataDebounced();
+        }
+    }
+
+    state.coListenLastTick = now;
+}
+
+let coListenSaveTimeout = null;
+
+function saveCoListenDataDebounced() {
+    if (coListenSaveTimeout) clearTimeout(coListenSaveTimeout);
+    coListenSaveTimeout = setTimeout(() => {
+        saveCoListenData();
+        coListenSaveTimeout = null;
+    }, 2000);
+}
+
+function saveCoListenData() {
+    try {
+        localStorage.setItem('coListenersData', JSON.stringify(state.coListeners));
+        localStorage.setItem('coListenNames', JSON.stringify([state.coListeners[0].name, state.coListeners[1].name]));
+    } catch(e) {}
+}
+
+function updateCoListenUI() {
+    state.coListeners.forEach((listener, i) => {
+        const card = dom.userCards[i];
+        const checkinBtn = dom.userCardCheckins[i];
+        const timeEl = i === 0 ? dom.userTime1 : dom.userTime2;
+        const timeValueEl = timeEl ? timeEl.querySelector('.user-card__time-value') : null;
+
+        if (card) {
+            card.classList.toggle('active', listener.isActive);
+        }
+        if (checkinBtn) {
+            checkinBtn.classList.toggle('active', listener.isActive);
+        }
+        if (timeValueEl) {
+            timeValueEl.textContent = formatTotalTime(listener.totalTime);
+        }
+    });
+}
+
+function formatTotalTime(seconds) {
+    if (!seconds || seconds < 0) return '00:00:00';
+    const totalSec = Math.floor(seconds);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// ===== 排行榜功能 =====
+
+function openRankModal() {
+    if (!dom.rankOverlay) return;
+
+    renderRankList();
+    dom.rankOverlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeRankModal() {
+    if (!dom.rankOverlay) return;
+    dom.rankOverlay.classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+function renderRankList() {
+    if (!dom.rankList || !dom.rankTotalTime) return;
+
+    // 按总时长降序排列
+    const ranked = state.coListeners.map((l, i) => ({ ...l, index: i }))
+        .sort((a, b) => b.totalTime - a.totalTime);
+
+    const totalTime = state.coListeners.reduce((sum, l) => sum + (l.totalTime || 0), 0);
+
+    if (totalTime <= 0) {
+        dom.rankList.innerHTML = `
+            <div class="rank-empty">
+                <i class="fas fa-headphones"></i>
+                <p>还没有听歌记录，快来一起听歌吧！🎵</p>
+            </div>
+        `;
+        dom.rankTotalTime.textContent = '总听歌时长：00:00:00';
+        return;
+    }
+
+    const medalIcons = ['🥇', '🥈'];
+    const badgeTexts = ['🏆 听歌王者', '🥈 音乐达人'];
+    const rankIcons = ['fa-crown', 'fa-medal'];
+
+    const html = ranked.map((item, rank) => {
+        const rankClass = rank === 0 ? 'rank-1' : 'rank-2';
+        const avatarIcon = item.icon === 'user-astronaut' ? 'fa-user-astronaut' : 'fa-user-ninja';
+
+        return `
+            <div class="rank-item ${rankClass}">
+                <div class="rank-item__medal">${medalIcons[rank] || ''}</div>
+                <div class="rank-item__avatar">
+                    <i class="fas ${avatarIcon}"></i>
+                </div>
+                <div class="rank-item__info">
+                    <div class="rank-item__name">${escapeHtml(item.name)}</div>
+                    <div class="rank-item__time">${formatTotalTime(item.totalTime)}</div>
+                </div>
+                <div class="rank-item__badge">${badgeTexts[rank] || ''}</div>
+            </div>
+        `;
+    }).join('');
+
+    dom.rankList.innerHTML = html;
+    dom.rankTotalTime.textContent = `总听歌时长：${formatTotalTime(totalTime)}`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 监听播放状态变化，自动管理计时器
+const _origPlay = HTMLAudioElement.prototype.play;
+HTMLAudioElement.prototype.play = function() {
+    const result = _origPlay.apply(this, arguments);
+    const hasActive = state.coListeners.some(l => l.isActive);
+    if (hasActive) {
+        startCoListenTimer();
+    }
+    return result;
+};
+
+// 监听暂停
+const _origPause = HTMLAudioElement.prototype.pause;
+HTMLAudioElement.prototype.pause = function() {
+    _origPause.apply(this, arguments);
+    // 计时器不会停止，但 tickCoListenTimer 中会检测 paused 状态
+};
 
 // 修复：更新当前歌曲信息和封面
 function updateCurrentSongInfo(song, options = {}) {
