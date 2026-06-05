@@ -967,6 +967,15 @@ body.mobile-view .co-listen-toggle-row {
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 6px 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+body.mobile-view .co-listen-toggle-row::-webkit-scrollbar {
+    display: none;
 }
 
 body.mobile-view .co-listen-toggle-btn {

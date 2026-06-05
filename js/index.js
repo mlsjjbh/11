@@ -1455,6 +1455,16 @@ async function bootstrapPersistentStorage() {
         console.warn("加载远程存储失败", error);
     } finally {
         remoteSyncEnabled = true;
+        // 推送 bootstrap 期间积压的共听数据
+        if (window._coListenPendingSync) {
+            window._coListenPendingSync = false;
+            try {
+                persistStorageItems({
+                    'coListenersData': JSON.stringify(state.coListeners),
+                    'coListenNames': JSON.stringify([state.coListeners[0].name, state.coListeners[1].name])
+                });
+            } catch(e) {}
+        }
     }
 }
 
@@ -1577,6 +1587,46 @@ function applyPersistentSnapshotFromRemote(data) {
             restoreSearchResultsList();
         }
     }
+
+    // 从云端恢复共听排行榜数据
+    if (typeof data.coListenersData === "string") {
+        try {
+            const remoteListeners = JSON.parse(data.coListenersData);
+            if (Array.isArray(remoteListeners) && remoteListeners.length === 2) {
+                remoteListeners.forEach((remote, i) => {
+                    if (state.coListeners[i]) {
+                        const localTotal = state.coListeners[i].totalTime || 0;
+                        const remoteTotal = remote.totalTime || 0;
+                        state.coListeners[i].totalTime = Math.max(localTotal, remoteTotal);
+                        state.coListeners[i].songCount = Math.max(state.coListeners[i].songCount || 0, remote.songCount || 0);
+                        state.coListeners[i].dailyTime = Math.max(state.coListeners[i].dailyTime || 0, remote.dailyTime || 0);
+                        state.coListeners[i].streakDays = Math.max(state.coListeners[i].streakDays || 0, remote.streakDays || 0);
+                    }
+                });
+                safeSetLocalStorage("coListenersData", data.coListenersData, { skipRemote: true });
+                // 如果有展开的排行榜弹窗，刷新显示
+                if (typeof renderRankList === 'function' && dom.rankOverlay && dom.rankOverlay.classList.contains('show')) {
+                    renderRankList();
+                }
+            }
+        } catch(e) {}
+    }
+    if (typeof data.coListenNames === "string") {
+        try {
+            const names = JSON.parse(data.coListenNames);
+            if (Array.isArray(names) && names.length === 2) {
+                state.coListeners[0].name = names[0] || state.coListeners[0].name;
+                state.coListeners[1].name = names[1] || state.coListeners[1].name;
+                safeSetLocalStorage("coListenNames", data.coListenNames, { skipRemote: true });
+            }
+        } catch(e) {}
+    }
+    // 同步到 UI
+    if (typeof updateCoListenUI === 'function') {
+        updateCoListenUI();
+    }
+    if (dom.userName1) dom.userName1.value = state.coListeners[0].name;
+    if (dom.userName2) dom.userName2.value = state.coListeners[1].name;
 
     dom.audioPlayer.volume = state.volume;
     dom.volumeSlider.value = state.volume;
@@ -4174,6 +4224,17 @@ function initCoListen() {
                 }
             }
         } catch(e) {}
+        // 合并远程数据后，重新检查每日日期（防止远程的 dailyTime 来自不同日期）
+        const today = new Date().toDateString();
+        if (state._coListenToday !== today) {
+            state.coListeners.forEach(function(l) {
+                if (l.dailyTime > 0) {
+                    l.streakDays = (l.streakDays || 0) + 1;
+                }
+                l.dailyTime = 0;
+            });
+            state._coListenToday = today;
+        }
         // 同步 UI 并保存
         if (dom.userName1) dom.userName1.value = state.coListeners[0].name;
         if (dom.userName2) dom.userName2.value = state.coListeners[1].name;
@@ -4190,18 +4251,58 @@ function initCoListen() {
         });
     });
 
-    // 绑定事件：昵称修改
+    // 绑定事件：昵称修改 — 同时修复移动端键盘弹出导致页面上移
+    function fixMobileInputOffset(input) {
+        if (!input || !window.__SOLARA_IS_MOBILE) return;
+        input.addEventListener('focus', function() {
+            // 让输入框保持在可视区域但不要滚动页面太多
+            setTimeout(function() {
+                this.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }.bind(this), 100);
+        });
+        input.addEventListener('blur', function() {
+            // 输入完成后恢复页面到顶部
+            setTimeout(function() {
+                window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+            }, 150);
+        });
+    }
+
+    // 移动端监听 visualViewport 变化，防止键盘顶起固定定位元素
+    if (window.__SOLARA_IS_MOBILE && window.visualViewport) {
+        var lastViewportHeight = window.visualViewport.height;
+        var viewportHandler = function() {
+            var currentHeight = window.visualViewport.height;
+            var keyboardOpen = currentHeight < lastViewportHeight * 0.85;
+            var coListenArea = document.getElementById('coListenArea');
+            if (coListenArea) {
+                // 键盘弹出时降低 co-listen area 位置，避免键盘遮挡
+                if (keyboardOpen) {
+                    var diff = lastViewportHeight - currentHeight;
+                    coListenArea.style.bottom = (diff + 16) + 'px';
+                } else {
+                    coListenArea.style.bottom = '';
+                }
+            }
+            lastViewportHeight = currentHeight;
+        };
+        window.visualViewport.addEventListener('resize', viewportHandler);
+        window.visualViewport.addEventListener('scroll', viewportHandler);
+    }
+
     if (dom.userName1) {
         dom.userName1.addEventListener('change', function() {
             state.coListeners[0].name = this.value || '听友①';
             saveCoListenData();
         });
+        fixMobileInputOffset(dom.userName1);
     }
     if (dom.userName2) {
         dom.userName2.addEventListener('change', function() {
             state.coListeners[1].name = this.value || '听友②';
             saveCoListenData();
         });
+        fixMobileInputOffset(dom.userName2);
     }
 
     // 绑定事件：排行榜按钮
@@ -4266,7 +4367,7 @@ function initCoListen() {
         startCoListenTimer();
     }
 
-    // 启动周期性云端同步（每30秒）
+    // 启动周期性云端同步（每5分钟兜底推送）
     if (window._coListenSyncInterval) {
         clearInterval(window._coListenSyncInterval);
     }
@@ -4275,7 +4376,7 @@ function initCoListen() {
         if (anyActive || state.coListeners.some(l => (l.totalTime || 0) > 0)) {
             saveCoListenData();
         }
-    }, 30000);
+    }, 300000);
 
     debugLog('共听模式初始化完成');
 }
@@ -4449,6 +4550,10 @@ function saveCoListenData() {
         safeSetLocalStorage('coListenersData', JSON.stringify(state.coListeners));
         safeSetLocalStorage('coListenNames', JSON.stringify([state.coListeners[0].name, state.coListeners[1].name]));
     } catch(e) {}
+    // 如果 remoteSyncEnabled 尚未就绪（bootstrap 还未完成），标记待推送
+    if (!remoteSyncEnabled) {
+        window._coListenPendingSync = true;
+    }
 }
 
 function updateCoListenUI() {
@@ -6729,8 +6834,6 @@ function autoPlayNext() {
         dom.audioPlayer.__solaraMediaSessionHandledEnded = false;
         return;
     }
-    // 歌曲自然结束，记录完成
-    recordSongCompleted();
     const mode = getActivePlayMode();
     if (mode === "single") {
         // 单曲循环
@@ -6745,6 +6848,8 @@ function autoPlayNext() {
 
 // 修复：播放下一首 - 支持播放模式和统一播放列表
 function playNext() {
+    // 切歌前记录已完成歌曲
+    recordSongCompleted();
     if (state.currentList === "favorite") {
         const favorites = ensureFavoriteSongsArray();
         if (favorites.length === 0) {
@@ -6809,6 +6914,8 @@ function playNext() {
 
 // 修复：播放上一首 - 支持播放模式和统一播放列表
 function playPrevious() {
+    // 切歌前记录已完成歌曲
+    recordSongCompleted();
     if (state.currentList === "favorite") {
         const favorites = ensureFavoriteSongsArray();
         if (favorites.length === 0) {
