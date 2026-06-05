@@ -96,6 +96,8 @@ const dom = {
     audioVisualizer: document.getElementById("audioVisualizer"),
     audioVisualizerBars: document.querySelectorAll(".audio-visualizer__bar"),
     // 共听模式元素
+    coListenToggle: document.getElementById("coListenToggle"),
+    coListenPanelWrapper: document.getElementById("coListenPanelWrapper"),
     coListenPanel: document.getElementById("coListenPanel"),
     coListenRankBtn: document.getElementById("coListenRankBtn"),
     rankOverlay: document.getElementById("rankOverlay"),
@@ -108,6 +110,7 @@ const dom = {
     userTime2: document.getElementById("userTime2"),
     userCardCheckins: document.querySelectorAll(".user-card__checkin"),
     userCards: document.querySelectorAll(".user-card"),
+    coListenToggleArrow: document.querySelector(".co-listen-toggle-arrow"),
 };
 
 window.SolaraDom = dom;
@@ -632,6 +635,8 @@ const STORAGE_KEYS_TO_SYNC = new Set([
     "favoritePlaybackTime",
     "searchSource",
     "lastSearchState.v1",
+    "coListenersData",
+    "coListenNames",
 ]);
 
 function createPersistentStorageClient() {
@@ -1410,12 +1415,14 @@ const state = {
             }
         } catch(e) {}
         return [
-            { name: '听友①', totalTime: 0, isActive: false, icon: 'user-astronaut' },
-            { name: '听友②', totalTime: 0, isActive: false, icon: 'user-ninja' }
+            { name: '听友①', totalTime: 0, isActive: false, icon: 'user-astronaut', songCount: 0, dailyTime: 0, streakDays: 0 },
+            { name: '听友②', totalTime: 0, isActive: false, icon: 'user-ninja', songCount: 0, dailyTime: 0, streakDays: 0 }
         ];
     })(),
     coListenTimer: null,
     coListenLastTick: null,
+    _coListenToday: new Date().toDateString(),
+    rankSortBy: 'totalTime',
 };
 
 let importSelectedMenuOutsideHandler = null;
@@ -4115,21 +4122,64 @@ function setupInteractions() {
 // ===== 共听模式功能 =====
 
 function initCoListen() {
-    // 从 localStorage 恢复用户昵称
-    try {
-        const savedNames = JSON.parse(localStorage.getItem('coListenNames') || 'null');
-        if (savedNames && Array.isArray(savedNames) && savedNames.length === 2) {
-            state.coListeners[0].name = savedNames[0];
-            state.coListeners[1].name = savedNames[1];
-        }
-    } catch(e) {}
-
-    // 同步昵称到输入框
-    if (dom.userName1) dom.userName1.value = state.coListeners[0].name;
-    if (dom.userName2) dom.userName2.value = state.coListeners[1].name;
-
-    // 更新UI
-    updateCoListenUI();
+    // 尝试从远程存储拉取共听数据，并与本地合并
+    (async function loadCoListenData() {
+        try {
+            const remoteResult = await persistentStorage.getItems(['coListenersData', 'coListenNames']);
+            if (remoteResult && remoteResult.data) {
+                const remoteListeners = remoteResult.data.coListenersData;
+                const remoteNames = remoteResult.data.coListenNames;
+                if (remoteListeners) {
+                    try {
+                        const parsed = JSON.parse(remoteListeners);
+                        if (Array.isArray(parsed) && parsed.length === 2) {
+                            // 合并：取各用户 totalTime 最大值，保留本地激活状态
+                            parsed.forEach((remote, i) => {
+                                if (state.coListeners[i]) {
+                                    const localTotal = state.coListeners[i].totalTime || 0;
+                                    const remoteTotal = remote.totalTime || 0;
+                                    state.coListeners[i].totalTime = Math.max(localTotal, remoteTotal);
+                                    // 合并新字段
+                                    if (remote.songCount !== undefined) state.coListeners[i].songCount = remote.songCount;
+                                    if (remote.dailyTime !== undefined) state.coListeners[i].dailyTime = remote.dailyTime;
+                                    if (remote.streakDays !== undefined) state.coListeners[i].streakDays = remote.streakDays;
+                                }
+                            });
+                        }
+                    } catch(e) {}
+                }
+                if (remoteNames) {
+                    try {
+                        const parsed = JSON.parse(remoteNames);
+                        if (Array.isArray(parsed) && parsed.length === 2) {
+                            state.coListeners[0].name = parsed[0] || state.coListeners[0].name;
+                            state.coListeners[1].name = parsed[1] || state.coListeners[1].name;
+                        }
+                    } catch(e) {}
+                }
+            }
+        } catch(e) {}
+        // 从 localStorage 恢复用户昵称（作为远程拉取完成后的备选）
+        try {
+            const savedLocal = safeGetLocalStorage('coListenNames');
+            if (savedLocal) {
+                const savedNames = JSON.parse(savedLocal);
+                if (Array.isArray(savedNames) && savedNames.length === 2) {
+                    if (!state.coListeners[0].name || state.coListeners[0].name === '听友①') {
+                        state.coListeners[0].name = savedNames[0];
+                    }
+                    if (!state.coListeners[1].name || state.coListeners[1].name === '听友②') {
+                        state.coListeners[1].name = savedNames[1];
+                    }
+                }
+            }
+        } catch(e) {}
+        // 同步 UI 并保存
+        if (dom.userName1) dom.userName1.value = state.coListeners[0].name;
+        if (dom.userName2) dom.userName2.value = state.coListeners[1].name;
+        updateCoListenUI();
+        saveCoListenData();
+    })();
 
     // 绑定事件：签到/签退按钮
     dom.userCardCheckins.forEach(btn => {
@@ -4161,6 +4211,14 @@ function initCoListen() {
         });
     }
 
+    // 绑定事件：共听面板展开/收起
+    if (dom.coListenToggle) {
+        dom.coListenToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleCoListenPanel();
+        });
+    }
+
     // 绑定事件：排行榜关闭
     if (dom.rankModalClose) {
         dom.rankModalClose.addEventListener('click', closeRankModal);
@@ -4182,27 +4240,134 @@ function initCoListen() {
         }
     });
 
+    // 绑定排行榜排序标签切换
+    document.querySelectorAll('.rank-sort-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            const sortBy = this.dataset.sort;
+            if (!sortBy) return;
+            // 更新激活状态
+            document.querySelectorAll('.rank-sort-tab').forEach(function(t) {
+                t.classList.remove('active');
+                t.setAttribute('aria-selected', 'false');
+            });
+            this.classList.add('active');
+            this.setAttribute('aria-selected', 'true');
+            // 更新排序并重新渲染
+            state.rankSortBy = sortBy;
+            if (dom.rankOverlay && dom.rankOverlay.classList.contains('show')) {
+                renderRankList();
+            }
+        });
+    });
+
     // 恢复计时器（如有激活用户）
     const hasActive = state.coListeners.some(l => l.isActive);
     if (hasActive) {
         startCoListenTimer();
     }
 
+    // 启动周期性云端同步（每30秒）
+    if (window._coListenSyncInterval) {
+        clearInterval(window._coListenSyncInterval);
+    }
+    window._coListenSyncInterval = setInterval(function() {
+        const anyActive = state.coListeners.some(l => l.isActive);
+        if (anyActive || state.coListeners.some(l => (l.totalTime || 0) > 0)) {
+            saveCoListenData();
+        }
+    }, 30000);
+
     debugLog('共听模式初始化完成');
+}
+
+function toggleCoListenPanel() {
+    const area = document.getElementById('coListenArea');
+    const wrapper = dom.coListenPanelWrapper;
+    if (!area || !wrapper) return;
+
+    const isExpanded = area.classList.contains('expanded');
+
+    if (typeof gsap !== 'undefined') {
+        gsap.killTweensOf(wrapper);
+    }
+
+    if (isExpanded) {
+        // 收起
+        if (typeof gsap !== 'undefined') {
+            gsap.to(wrapper, {
+                maxHeight: 0,
+                opacity: 0,
+                duration: 0.35,
+                ease: 'power2.inOut',
+                onComplete: function() {
+                    area.classList.remove('expanded');
+                    if (dom.coListenToggle) {
+                        dom.coListenToggle.setAttribute('title', '展开一起听歌');
+                    }
+                }
+            });
+        } else {
+            area.classList.remove('expanded');
+            if (dom.coListenToggle) {
+                dom.coListenToggle.setAttribute('title', '展开一起听歌');
+            }
+        }
+    } else {
+        // 展开
+        area.classList.add('expanded');
+        if (dom.coListenToggle) {
+            dom.coListenToggle.setAttribute('title', '收起一起听歌');
+        }
+        if (typeof gsap !== 'undefined') {
+            // 先确保 max-height 有足够空间
+            const panel = dom.coListenPanel;
+            if (panel) {
+                const targetHeight = panel.scrollHeight + 40; // panel height + padding
+                gsap.fromTo(wrapper,
+                    { maxHeight: 0, opacity: 0 },
+                    {
+                        maxHeight: targetHeight,
+                        opacity: 1,
+                        duration: 0.4,
+                        ease: 'back.out(1.2)'
+                    }
+                );
+            }
+        }
+    }
 }
 
 function toggleCoListenUser(userIndex) {
     const listener = state.coListeners[userIndex];
     const wasActive = listener.isActive;
+    const btn = dom.userCardCheckins[userIndex];
 
     if (wasActive) {
         // 签退
         listener.isActive = false;
         showNotification(`${listener.name} 已停止计时`, 'info');
+        if (btn && typeof gsap !== 'undefined') {
+            gsap.killTweensOf(btn);
+            gsap.to(btn, { scale: 0.9, duration: 0.1, ease: 'power2.in',
+                onComplete: function() {
+                    gsap.to(btn, { scale: 1, duration: 0.2, ease: 'back.out(2)' });
+                }
+            });
+        }
     } else {
         // 签到
         listener.isActive = true;
         showNotification(`${listener.name} 开始听歌计时！🎵`, 'success');
+        if (btn && typeof gsap !== 'undefined') {
+            gsap.killTweensOf(btn);
+            gsap.fromTo(btn, { scale: 1 }, {
+                scale: 1.3, duration: 0.15, ease: 'power2.out',
+                yoyo: true, repeat: 1,
+                onComplete: function() {
+                    gsap.to(btn, { scale: 1, duration: 0.3, ease: 'elastic.out(1, 0.5)' });
+                }
+            });
+        }
     }
 
     updateCoListenUI();
@@ -4235,6 +4400,19 @@ function tickCoListenTimer() {
     const now = Date.now();
     const paused = dom.audioPlayer ? dom.audioPlayer.paused : true;
 
+    // 每日重置检查
+    const today = new Date().toDateString();
+    if (state._coListenToday !== today) {
+        // 新的一天，重置 dailyTime，更新 streakDays
+        state.coListeners.forEach(listener => {
+            if (listener.dailyTime > 0) {
+                listener.streakDays = (listener.streakDays || 0) + 1;
+            }
+            listener.dailyTime = 0;
+        });
+        state._coListenToday = today;
+    }
+
     if (state.coListenLastTick && !paused) {
         const elapsed = (now - state.coListenLastTick) / 1000;
         let anyActive = false;
@@ -4242,6 +4420,7 @@ function tickCoListenTimer() {
         state.coListeners.forEach(listener => {
             if (listener.isActive) {
                 listener.totalTime += elapsed;
+                listener.dailyTime = (listener.dailyTime || 0) + elapsed;
                 anyActive = true;
             }
         });
@@ -4267,8 +4446,8 @@ function saveCoListenDataDebounced() {
 
 function saveCoListenData() {
     try {
-        localStorage.setItem('coListenersData', JSON.stringify(state.coListeners));
-        localStorage.setItem('coListenNames', JSON.stringify([state.coListeners[0].name, state.coListeners[1].name]));
+        safeSetLocalStorage('coListenersData', JSON.stringify(state.coListeners));
+        safeSetLocalStorage('coListenNames', JSON.stringify([state.coListeners[0].name, state.coListeners[1].name]));
     } catch(e) {}
 }
 
@@ -4308,24 +4487,68 @@ function openRankModal() {
     renderRankList();
     dom.rankOverlay.classList.add('show');
     document.body.style.overflow = 'hidden';
+
+    // 使用 GSAP 增强弹窗入场动画
+    if (typeof gsap !== 'undefined') {
+        const modal = dom.rankOverlay.querySelector('.rank-modal');
+        if (modal) {
+            gsap.killTweensOf(modal);
+            gsap.fromTo(modal,
+                { opacity: 0, scale: 0.85, y: 30 },
+                { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: 'back.out(1.4)', clearProps: 'transform' }
+            );
+        }
+        // 淡入遮罩
+        gsap.killTweensOf(dom.rankOverlay);
+        gsap.fromTo(dom.rankOverlay,
+            { opacity: 0 },
+            { opacity: 1, duration: 0.3, ease: 'power2.out' }
+        );
+    }
 }
 
 function closeRankModal() {
     if (!dom.rankOverlay) return;
-    dom.rankOverlay.classList.remove('show');
-    document.body.style.overflow = '';
+
+    if (typeof gsap !== 'undefined') {
+        const modal = dom.rankOverlay.querySelector('.rank-modal');
+        if (modal) {
+            gsap.killTweensOf(modal);
+            gsap.to(modal, {
+                opacity: 0, scale: 0.9, y: 20, duration: 0.2, ease: 'power2.in'
+            });
+        }
+        gsap.killTweensOf(dom.rankOverlay);
+        gsap.to(dom.rankOverlay, {
+            opacity: 0, duration: 0.2, ease: 'power2.in',
+            onComplete: function() {
+                dom.rankOverlay.classList.remove('show');
+                dom.rankOverlay.style.opacity = '';
+                document.body.style.overflow = '';
+            }
+        });
+    } else {
+        dom.rankOverlay.classList.remove('show');
+        document.body.style.overflow = '';
+    }
 }
 
 function renderRankList() {
     if (!dom.rankList || !dom.rankTotalTime) return;
 
-    // 按总时长降序排列
+    const sortBy = state.rankSortBy || 'totalTime';
+
+    // 按所选维度降序排列
     const ranked = state.coListeners.map((l, i) => ({ ...l, index: i }))
-        .sort((a, b) => b.totalTime - a.totalTime);
+        .sort((a, b) => (b[sortBy] || 0) - (a[sortBy] || 0));
 
     const totalTime = state.coListeners.reduce((sum, l) => sum + (l.totalTime || 0), 0);
+    const totalSongs = state.coListeners.reduce((sum, l) => sum + (l.songCount || 0), 0);
+    const totalDaily = state.coListeners.reduce((sum, l) => sum + (l.dailyTime || 0), 0);
 
-    if (totalTime <= 0) {
+    const hasData = state.coListeners.some(l => (l.totalTime || 0) > 0 || (l.songCount || 0) > 0);
+
+    if (!hasData) {
         dom.rankList.innerHTML = `
             <div class="rank-empty">
                 <i class="fas fa-headphones"></i>
@@ -4336,13 +4559,25 @@ function renderRankList() {
         return;
     }
 
+    const badgeTextsBySort = {
+        totalTime: ['🏆 听歌王者', '🥈 音乐达人'],
+        songCount: ['🎧 刷歌狂魔', '🎵 爱听一族'],
+        dailyTime: ['🔥 今日之星', '⭐ 今日活跃']
+    };
+    const badgeTexts = badgeTextsBySort[sortBy] || badgeTextsBySort.totalTime;
+
     const medalIcons = ['🥇', '🥈'];
-    const badgeTexts = ['🏆 听歌王者', '🥈 音乐达人'];
-    const rankIcons = ['fa-crown', 'fa-medal'];
 
     const html = ranked.map((item, rank) => {
         const rankClass = rank === 0 ? 'rank-1' : 'rank-2';
         const avatarIcon = item.icon === 'user-astronaut' ? 'fa-user-astronaut' : 'fa-user-ninja';
+
+        let timeDisplay = '';
+        if (sortBy === 'songCount') {
+            timeDisplay = `${item.songCount || 0} 首`;
+        } else {
+            timeDisplay = formatTotalTime(item[sortBy] || 0);
+        }
 
         return `
             <div class="rank-item ${rankClass}">
@@ -4352,7 +4587,7 @@ function renderRankList() {
                 </div>
                 <div class="rank-item__info">
                     <div class="rank-item__name">${escapeHtml(item.name)}</div>
-                    <div class="rank-item__time">${formatTotalTime(item.totalTime)}</div>
+                    <div class="rank-item__time">${timeDisplay}</div>
                 </div>
                 <div class="rank-item__badge">${badgeTexts[rank] || ''}</div>
             </div>
@@ -4360,7 +4595,16 @@ function renderRankList() {
     }).join('');
 
     dom.rankList.innerHTML = html;
-    dom.rankTotalTime.textContent = `总听歌时长：${formatTotalTime(totalTime)}`;
+
+    let footerText = '';
+    if (sortBy === 'totalTime') {
+        footerText = `总听歌时长：${formatTotalTime(totalTime)}`;
+    } else if (sortBy === 'songCount') {
+        footerText = `总听歌数量：${totalSongs} 首`;
+    } else if (sortBy === 'dailyTime') {
+        footerText = `今日共听：${formatTotalTime(totalDaily)}`;
+    }
+    dom.rankTotalTime.textContent = footerText;
 }
 
 function escapeHtml(text) {
@@ -6467,11 +6711,26 @@ function scheduleDeferredSongAssets(song, playPromise) {
 }
 
 // 修复：自动播放下一首 - 支持播放模式
+// 记录当前活跃用户完成了一首歌
+function recordSongCompleted() {
+    const hasActive = state.coListeners.some(l => l.isActive);
+    if (!hasActive) return;
+    state.coListeners.forEach(listener => {
+        if (listener.isActive) {
+            listener.songCount = (listener.songCount || 0) + 1;
+        }
+    });
+    updateCoListenUI();
+    saveCoListenDataDebounced();
+}
+
 function autoPlayNext() {
     if (dom.audioPlayer && dom.audioPlayer.__solaraMediaSessionHandledEnded === 'skip') {
         dom.audioPlayer.__solaraMediaSessionHandledEnded = false;
         return;
     }
+    // 歌曲自然结束，记录完成
+    recordSongCompleted();
     const mode = getActivePlayMode();
     if (mode === "single") {
         // 单曲循环

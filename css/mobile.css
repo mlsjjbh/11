@@ -952,6 +952,74 @@ body.mobile-view .co-listen-area {
     max-width: 88%;
     margin: 0;
     padding: 0;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+}
+
+body.mobile-view .co-listen-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(10, 10, 15, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 6px 10px;
+}
+
+body.mobile-view .co-listen-toggle-btn {
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    backdrop-filter: none;
+    color: #ecf0f1;
+    font-size: 12px;
+    gap: 5px;
+}
+
+body.mobile-view .co-listen-toggle-btn i {
+    font-size: 13px;
+    color: #1abc9c;
+}
+
+body.mobile-view .co-listen-toggle-btn:hover {
+    background: rgba(26, 188, 156, 0.15);
+    transform: none;
+    box-shadow: none;
+    color: #1abc9c;
+}
+
+body.mobile-view .co-listen-toggle-btn:hover i {
+    color: #1abc9c;
+}
+
+body.mobile-view .co-listen-rank-btn {
+    display: inline-flex;
+    padding: 6px 10px;
+    border: none;
+    background: transparent;
+    backdrop-filter: none;
+    color: #ecf0f1;
+    font-size: 12px;
+    border-radius: 10px;
+}
+
+body.mobile-view .co-listen-rank-btn:hover {
+    background: rgba(251, 191, 36, 0.15);
+    transform: none;
+    box-shadow: none;
+    color: #fbbf24;
+}
+
+body.mobile-view .co-listen-rank-btn i {
+    font-size: 13px;
+}
+
+body.mobile-view .co-listen-panel-wrapper {
+    width: 100%;
 }
 
 body.mobile-view .co-listen-panel {
@@ -1006,10 +1074,6 @@ body.mobile-view .co-listen-divider__icon {
     font-size: 10px;
 }
 
-body.mobile-view .co-listen-rank-btn {
-    display: none;
-}
-
 /* 移动端排行榜弹窗 */
 body.mobile-view .rank-modal {
     width: 88vw;
@@ -1023,6 +1087,18 @@ body.mobile-view .rank-modal__header {
 
 body.mobile-view .rank-modal__header h2 {
     font-size: 17px;
+}
+
+body.mobile-view .rank-modal__tabs {
+    padding: 8px 16px 0;
+    gap: 2px;
+    overflow-x: auto;
+}
+
+body.mobile-view .rank-sort-tab {
+    font-size: 12px;
+    padding: 6px 12px;
+    white-space: nowrap;
 }
 
 body.mobile-view .rank-modal__body {

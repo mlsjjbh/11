@@ -581,51 +581,62 @@
 
         <!-- 共听模式 & 排行榜区域 -->
         <div class="co-listen-area" id="coListenArea">
-            <div class="co-listen-panel" id="coListenPanel">
-                <div class="user-card" data-user="0">
-                    <div class="user-card__avatar">
-                        <i class="fas fa-user-astronaut"></i>
-                    </div>
-                    <div class="user-card__info">
-                        <div class="user-card__name">
-                            <input type="text" id="userName1" class="user-name-input" value="听友①" maxlength="8" placeholder="昵称" />
+            <!-- 始终可见的切换行 -->
+            <div class="co-listen-toggle-row" id="coListenToggleRow">
+                <button class="co-listen-toggle-btn" id="coListenToggle" type="button" title="展开一起听歌">
+                    <i class="fas fa-headphones"></i>
+                    <span>一起听歌</span>
+                    <i class="fas fa-chevron-down co-listen-toggle-arrow"></i>
+                </button>
+                <button class="co-listen-rank-btn" id="coListenRankBtn" type="button" title="查看听歌排行榜">
+                    <i class="fas fa-trophy"></i>
+                    <span>排行榜</span>
+                </button>
+            </div>
+            <!-- 可折叠面板 -->
+            <div class="co-listen-panel-wrapper" id="coListenPanelWrapper">
+                <div class="co-listen-panel" id="coListenPanel">
+                    <div class="user-card" data-user="0">
+                        <div class="user-card__avatar">
+                            <i class="fas fa-user-astronaut"></i>
                         </div>
-                        <div class="user-card__time" id="userTime1">
-                            <span class="user-card__time-value">00:00:00</span>
+                        <div class="user-card__info">
+                            <div class="user-card__name">
+                                <input type="text" id="userName1" class="user-name-input" value="听友①" maxlength="8" placeholder="昵称" />
+                            </div>
+                            <div class="user-card__time" id="userTime1">
+                                <span class="user-card__time-value">00:00:00</span>
+                            </div>
                         </div>
+                        <button class="user-card__checkin" data-user="0" type="button" title="点击开始听歌计时">
+                            <i class="fas fa-headphones"></i>
+                        </button>
                     </div>
-                    <button class="user-card__checkin" data-user="0" type="button" title="点击开始听歌计时">
-                        <i class="fas fa-headphones"></i>
-                    </button>
-                </div>
-                <div class="co-listen-divider">
-                    <div class="co-listen-divider__line"></div>
-                    <div class="co-listen-divider__icon">
-                        <i class="fas fa-heart"></i>
-                    </div>
-                    <div class="co-listen-divider__line"></div>
-                </div>
-                <div class="user-card" data-user="1">
-                    <div class="user-card__avatar">
-                        <i class="fas fa-user-ninja"></i>
-                    </div>
-                    <div class="user-card__info">
-                        <div class="user-card__name">
-                            <input type="text" id="userName2" class="user-name-input" value="听友②" maxlength="8" placeholder="昵称" />
+                    <div class="co-listen-divider">
+                        <div class="co-listen-divider__line"></div>
+                        <div class="co-listen-divider__icon">
+                            <i class="fas fa-heart"></i>
                         </div>
-                        <div class="user-card__time" id="userTime2">
-                            <span class="user-card__time-value">00:00:00</span>
-                        </div>
+                        <div class="co-listen-divider__line"></div>
                     </div>
-                    <button class="user-card__checkin" data-user="1" type="button" title="点击开始听歌计时">
-                        <i class="fas fa-headphones"></i>
-                    </button>
+                    <div class="user-card" data-user="1">
+                        <div class="user-card__avatar">
+                            <i class="fas fa-user-ninja"></i>
+                        </div>
+                        <div class="user-card__info">
+                            <div class="user-card__name">
+                                <input type="text" id="userName2" class="user-name-input" value="听友②" maxlength="8" placeholder="昵称" />
+                            </div>
+                            <div class="user-card__time" id="userTime2">
+                                <span class="user-card__time-value">00:00:00</span>
+                            </div>
+                        </div>
+                        <button class="user-card__checkin" data-user="1" type="button" title="点击开始听歌计时">
+                            <i class="fas fa-headphones"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
-            <button class="co-listen-rank-btn" id="coListenRankBtn" type="button" title="查看听歌排行榜">
-                <i class="fas fa-trophy"></i>
-                <span>排行榜</span>
-            </button>
         </div>
 
         <!-- 排行榜弹窗 -->
@@ -636,6 +647,11 @@
                     <button class="rank-modal__close" id="rankModalClose" type="button">
                         <i class="fas fa-times"></i>
                     </button>
+                </div>
+                <div class="rank-modal__tabs" id="rankSortTabs" role="tablist">
+                    <button class="rank-sort-tab active" type="button" role="tab" data-sort="totalTime" aria-selected="true">总时长</button>
+                    <button class="rank-sort-tab" type="button" role="tab" data-sort="songCount" aria-selected="false">歌曲数</button>
+                    <button class="rank-sort-tab" type="button" role="tab" data-sort="dailyTime" aria-selected="false">今日</button>
                 </div>
                 <div class="rank-modal__body" id="rankModalBody">
                     <div class="rank-list" id="rankList"></div>

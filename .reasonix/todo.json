@@ -1,0 +1,44 @@
+[
+  {
+    "phase": "1. 将共听区域改造为可折叠按钮",
+    "steps": [
+      {"name": "在 index.html 添加共听切换按钮", "status": "completed"},
+      {"name": "在 style.css 添加折叠样式与按钮样式", "status": "completed"},
+      {"name": "在 mobile.css 调整移动端共听默认折叠", "status": "completed"},
+      {"name": "在 index.js 绑定切换逻辑并用 GSAP 动画展开/收起", "status": "completed"}
+    ]
+  },
+  {
+    "phase": "2. 将排行榜数据从 localStorage 改为实时云端共享",
+    "steps": [
+      {"name": "注册 coListenersData 为云端同步键", "status": "completed"},
+      {"name": "修改 saveCoListenData 使用 safeSetLocalStorage", "status": "completed"},
+      {"name": "修改 initCoListen 从远程拉取合并数据", "status": "completed"},
+      {"name": "添加周期性同步，实现实时共享", "status": "completed"}
+    ]
+  },
+  {
+    "phase": "3. 多样化排名指标",
+    "steps": [
+      {"name": "扩展 listener 对象增加 songCount/dailyTime/streakDays", "status": "completed"},
+      {"name": "修改 tickCoListenTimer 记录今日时长", "status": "completed"},
+      {"name": "新增 recordSongCompleted 函数", "status": "completed"},
+      {"name": "修改排行榜弹窗支持多维度排序切换", "status": "completed"}
+    ]
+  },
+  {
+    "phase": "4. 使用 GSAP 使动画更流畅",
+    "steps": [
+      {"name": "共听面板展开/收起用 GSAP 动画", "status": "completed"},
+      {"name": "排行榜弹窗补充 GSAP 弹性效果", "status": "completed"},
+      {"name": "签到脉冲用 GSAP 替换 CSS", "status": "completed"}
+    ]
+  },
+  {
+    "phase": "5. 修复电脑端封面被搜索框遮挡",
+    "steps": [
+      {"name": "调整搜索区域 z-index 分层", "status": "completed"},
+      {"name": "确保封面区域在正确层级", "status": "completed"}
+    ]
+  }
+]
